@@ -55,10 +55,7 @@ Precondition: Inputs and weights have been set.
 */
 double Neuron::CalculateSignal()
 {
-	Signal = 0.0
-	for(int i = 0; i < _inputs.size(); i++){
-		Signal += (_inputs[i] * _weights);
-	}
+	Signal = InnerProduct(Inputs, Weights);
 	
 	return Signal;
 }
@@ -74,6 +71,7 @@ double Neuron::CalculateOutput()
 {
 	//just map and call this neuron's activation function
 	switch(ActivationType){
+
 			case ActivationFunction.TANH:
 					Output = Tanh(Signal);
 				break;
@@ -81,8 +79,9 @@ double Neuron::CalculateOutput()
 			case ActivationFunction.LINEAR:
 					Output = Signal;
 				break;
+
 			case ActivationFunction.SIGN:
-					Output = (Signal >= 0) 1.0 : -1.0;
+					Output = (Signal >= 0) ? 1.0 : -1.0;
 				break;
 				
 			case ActivationFunction.SIGMOID:
@@ -90,15 +89,12 @@ double Neuron::CalculateOutput()
 				break;
 		
 			default:
-					cout << "ERROR unknown output type: " << ActivationType << endl;
+					cout << "ERROR unknown output type: " << (int)ActivationType << endl;
 				break;
 	}
 	
 	return Output;
 }
-
-
-
 
 /*
 double Neuron::Sigmoid(const vector<double>& inputs)
@@ -125,29 +121,4 @@ double Neuron::InnerProduct(const vector<double>& inputs, const vector<double>& 
 	}
 	
 	return sum;
-}
-
-/*
-Simulates the neuron on the inputs. The output is both returned and also saved in Output.
-*/
-double Neuron::Simulate(vector<double>& inputs)
-{
-	double Output = 0;
-	
-	switch(methodType){
-		case SIGMOID:
-				Output = Sigmoid(inputs);
-				break;
-		
-		case LINEAR:
-				Output = Linear(inputs);
-				break;
-		
-		default:
-			cout << "ERROR GetOutput() method unknown: " << methodType << endl;
-			exit(0);
-			break;
-	}
-	
-	return Output;
 }

@@ -1,0 +1,2 @@
+#!/bin/bash
+g++ Neuron.cpp ANN.cpp main.cpp -o testANN

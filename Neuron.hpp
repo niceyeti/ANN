@@ -10,8 +10,6 @@ applications, as well as for neural network components.
 enum class ActivationFunction{TANH, LOGISTIC, LINEAR, SIGN };
 
 class Neuron{
-	private:
-		
 	public:
 		vector<double> Weights;
 		vector<double> Inputs;

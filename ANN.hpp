@@ -20,13 +20,15 @@ class MultiLayerNetwork{
 		//eta performs best with some decaying value updates
 		void _updateEta();
 	public: 
+		void ReadDataset(const string& path);
 		double Eta;
 		vector<double> Outputs;
-		//single layer of hidden units for now; 
+		//single layer of hidden units for now;
 		vector<double> HiddenOutputs;
 		MultiLayerNet(int numHiddenUnits, int numOutputUnits);
 		~MultiLayerNet();
 		void BackPropagation(vector<vector<double> >& dataset);
 		void Classify(vector<double>& example);
 		void Test(vector<vector<double> >& dataset);
+		void Train(const string& path, const double eta);
 };
