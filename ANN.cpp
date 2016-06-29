@@ -30,14 +30,19 @@ which this mirrors.
 
 Another very terse source: http://www.cse.unsw.edu.au/~cs9417ml/MLP2/BackPropagation.html
 
-Imlements stochastic gradient descent, using standard backpropagation.
-
-
+The gist:
+	Iterate over the examples e, doing the following:
+	Forward compute the activation for all neurons using the e
+	-Calculate the error at the output nodes: delta_o = (t_k - z_k) * phi_prime(signal)
+	-Calculate the error at the hidden layer: dW = phi_prime(signal) * Sigma( delta_o * w_io )
+	-Update the weights for the hidden layer, using these dW's
+	-Update the weights for the final layer, using delta
+	-Iterate, until the error for the network falls below some threshold. The most straightforward error is simply the sum-of-squares of the delta_o
 */
 void BackPropagation(vector<vector<double> >& dataset, double eta)
 {
 	int i, j, l;
-	double convergenceThreshold, networkError, sum;
+	double convergenceThreshold, netError, prevNetError, sum, dW;
 
 	//intialize the weights to random values
 	_assignRandomWeights();
@@ -45,13 +50,11 @@ void BackPropagation(vector<vector<double> >& dataset, double eta)
 	networkError = 1;
 	convergence = 0;
 	while(networkError > convergenceThreshold){
-		
 		//randomly choose an example
 		vector<double>& example = dataset[ rand() % dataset.size() ];
 		//Run the forward pass of the network to set all neuron outputs for this sample
 		Classify(example);
-		//backpropagate the error 
-		//_backPropagate();
+
 		//calculate the final-layer deltas, which are just the signal-prime values
 		vector<Neuron>& finalLayer = _layers[_layers.size()-1];
 		for(i = 0; i < finalLayer.size(); i++){
@@ -59,7 +62,7 @@ void BackPropagation(vector<vector<double> >& dataset, double eta)
 			finalLayer[i].Delta = finalLayer[i].TanhPrime( finalLayer[i].Signal ) * (example.last() - finalLayer[i].Output);
 		}
 		
-		//backpropagate the deltas through the layers (here l, i, and j correspond with the notation by Abu-Mustafa)
+		//backpropagate the deltas through the layers
 		for(l = _layers().size() - 2; l >= 0; l--){
 			vector<Neuron> leftLayer = _layers[l];
 			vector<Neuron> rightLayer = _layers[l+1];
@@ -68,10 +71,10 @@ void BackPropagation(vector<vector<double> >& dataset, double eta)
 				for(j = 0, sum = 0.0; j < rightLayer.size(); j++){
 					sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1]); //plus one on the right, to account for the bias weight
 				}
-				leftLayer[i].Delta = leftLayer[i].TanhPrime( leftLayer[i].Signal ) * sum;	
+				leftLayer[i].Delta = leftLayer[i].TanhPrime( leftLayer[i].Signal ) * sum;
 			}
 		}
-		
+
 		//update weights based on deltas just calculated; this is the actual gradient update part
 		//update the final layer weights first
 		vector<Neuron>& prevNeurons = _layers[_layers.size()-2];
@@ -80,50 +83,50 @@ void BackPropagation(vector<vector<double> >& dataset, double eta)
 			//iterate the weights for this output neuron; the first/0th weight is always the bias
 			for(j = 0; j < outputNeurons[i].Weights.size(); j++){
 				if(j == 0){ //update the bias weight, which is attached to no previous neuron
-					outputNeurons[i].Weights[j] = outputNeurons[i].Weights[j] + eta * outputNeurons[i].Delta;
+					dW = (eta * outputNeurons[i].Delta);
 				}
 				else{ //else, for all other weights the update is dependent on the output of a neuron
-					outputNeurons[i].Weights[j] = outputNeurons[i].Weights[j] + eta * outputNeurons[i].Delta * prevNeurons[j-1].Output;
+					dW = (eta * outputNeurons[i].Delta * prevNeurons[j-1].Output);
 				}
+				outputNeurons[i].Weights[j] += dW;
 			}
 		}
 		
-		/*
-		//TODO: Code for iterating multiple hidden layers; not needed for now, for a two-layer net of 1 hidden layer, 1 output layer
-		//now iterate the hidden layers, recursively
+		//now iterate and update the hidden layer weights
 		for(l = _layers.size()-2; l <= 0; l--){ //iterate the neuron layers
-			vector<Neuron> leftLayer = _layers[l];
-			vector<Neuron> rightLayer = _layers[l+1];
-			for(i = 0; i < rightLayer.size(); i++){ //iterate the neurons in this layer
-				Neuron& rightNeuron = rightLayer[i];
-				for(j = 0; j < rightNeuron.Weights.size(); j++){
-					if(j == 0){ //again, for j==0, the bias weight is not associated with a previous neuron; the input is implicitly a constant 1.0
-						rightNeuron.Weights[j] = rightNeuron.Weights[j] + eta * rightNeuron.Weights[j] * rightNeuron.Delta;
+			vector<Neuron> hiddenLayer = _layers[l];
+			//iterate the neurons in this layer
+			for(i = 0; i < lefttLayer.size(); i++){
+				//iterate the weights for this neuron
+				for(j = 0; j < hiddenLayer[i].Weights.size(); j++){
+					if(j == 0){ //for j==0, the bias weight is not associated with a previous neuron; the input is implicitly a constant 1.0
+						dW = eta * hiddenLayer[i].Weights[j] * hiddenLayer[i].Delta;
 					}
 					else{
-						rightNeuron.Weights[j] = rightNeuron.Weights[j] + eta * rightNeuron.Weights[j] * rightNeuron.Delta * leftLayer[j-1].Delta; //minus one, for the sake of skipping the bias weight
+						//if this is the first hidden layer, the input comes from the example; else, it comes from the previous layer's output
+						if(l == 0){
+							input = example[j-1];  //minus one, for the sake of skipping the bias weight
+						}
+						else{
+							input = hiddenLayer[j-1].Signal;  //minus one, for the sake of skipping the bias weight
+						}
+						dW = eta * hiddenLayer[i].Weights[j] * hiddenLayer[i].Delta * input;
 					}
+					//weight update
+					hiddenLayer[i].Weights[j] += dW;
 				}
 			}
 		}
-		*/
-		
-		//Iterate the first (leftmost) hidden layer; this code should remain active even if there are multiple hidden layers
-		vector<Neuron>& firstLayer = _layers[0];
-		for(i = 0; i < firstLayer.size(); i++){ //iterate the neurons in this layer
-			for(j = 0; j < firstLayer[i].Weights.size(); j++){
-				if(j == 0){ //update the the bias weight
-					firstLayer[i].Weights[j] = firstLayer[i].Weights[j] + eta * firstLayer[i].Delta;
-				}
-				else{
-					firstLayer[i].Weights[j] = firstLayer[i].Weights[j] + eta * firstLayer[i].Delta * example[j-1];
-				}
-			}
+
+		//track error info
+		prevNetError = netError;
+		netError = 0.0;
+		for(i = 0; i < _layers[_layer.size()]; i++){
+			netError += _layers[i].Delta;
 		}
+		cout << "Error: " << netError << "\tDelta: " << (prevNetError - netError) << endl;
 		
-		//update eta
-		
-		//caculate total change in weights to detect convergence threshold
+		//update eta, the learning rate
 		
 		
 	}
@@ -132,36 +135,20 @@ void BackPropagation(vector<vector<double> >& dataset, double eta)
 /*
 Network outputs need not be binary, so the caller must read Output vector to get the classification result.
 
-@example: a vector of fature values, along with a +/-1 to indicate class membership.
+@example: a vector of feature values, along with a +/-1 to indicate class membership.
 */
 void Classify(vector<double>& example)
 {
-	//set the network inputs
-	for(int i = 0; i < _inputs.size(); i++){
-		_inputs[i] = example[i];
+	int l, i, j;
+	
+	for(l = 0; l < _layers.size(); l++){
+		for(i = 0; i < _layers[0].size(); i ++){
+			_layers[l][i].Simulate(example);
+		}
 	}
 	
-	//calculate the first hidden layer signals and outputs
-	for(int i = 0; i < _hiddenUnits.size(); i++){
-		_hiddenUnits[i].
-		
-		
-	}
+	//don't return anything, just let the caller read the outputs, for now.
 	
-	
-	
-	
-	HiddenOutputs.resize(_hiddenUnits.size());
-	Outputs.resize();
-	for(int i = 0; i < _hiddenUnits.size(); i++){
-		
-		
-		HiddenOutputs[i] = _hiddenUnits[i].Simulate(example);
-	}
-	
-	for(int i = 0; i < _outputUnits.size(); i++){
-		Outputs[i] = _outputUnits[i].Simulate(hiddenOutputs);
-	}
 }
 
 void Test(vector<vector<double> >& dataset)
@@ -172,7 +159,4 @@ void Test(vector<vector<double> >& dataset)
 		Classify(dataset[i]);
 	}
 }
-
-
-
 
