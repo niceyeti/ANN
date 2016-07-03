@@ -1,20 +1,16 @@
 #include "ANN.hpp"
+#include "Util.hpp"
 
-int main(void)
+int main(int argc, char** argv)
 {
 	string path;
-	MultiLayerNetwork ann;
+	MultiLayerNetwork ann(2, 8, 1);
 	double eta;
+	vector<vector<double> > dataset;
 	
-	ann.Train(path,eta);
-	
+	path = "data_2d.csv";
+	readCsv(path, dataset);
+	//ann.BackPropagation(dataset);
 
-
-
-	
-	
-	
 	return 0;
 }
-
-

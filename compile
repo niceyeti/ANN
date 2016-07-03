@@ -1,2 +1,2 @@
 #!/bin/bash
-g++ Neuron.cpp ANN.cpp main.cpp -o testANN
+g++ Neuron.cpp ANN.cpp Util.cpp main.cpp -o testANN

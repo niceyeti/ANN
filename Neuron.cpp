@@ -1,26 +1,55 @@
 #include "Neuron.hpp"
 
-Neuron::Neuron(int numInputs, int methodType)
+Neuron::Neuron(int numInputs, ActivationFunction methodType)
 {
 	Weights.resize(numInputs);
-	Method = methodType;
+	Inputs.resize(numInputs);
+	PhiFunction = methodType;
 	Output = 0;
+}
+
+Neuron::Neuron(const Neuron& lhs)
+{
+	if(this != &lhs){
+		PhiFunction = lhs.PhiFunction;
+		Output = lhs.Output;
+		
+		Weights.resize(lhs.Weights.size());
+		//copy the weights
+		for(int i = 0; i < lhs.Weights.size(); i++){
+			Weights[i] = lhs.Weights[i];
+		}
+		
+		Inputs.resize(lhs.Inputs.size());
+		for(int i = 0; i < lhs.Inputs.size(); i++){
+			Inputs[i] = lhs.Inputs[i];
+		}
+	}
 }
 
 Neuron::~Neuron()
 {
 	Weights.clear();
+	Inputs.clear();
 }
 
 /*
 Trains the neuron according to the labelled dataset.
 The vector of vectors is essentially a matrix, as many lit write-ups describe it.
 Each vector is augmented with +1.0 or -1.0 in the last column to indicate binary class membership.
-*/
+
 void Neuron::Train(vector<vector<double> >& dataset, int traingMethod)
 {
 	
 	
+}
+*/
+
+void Neuron::NullifyInputPtrs()
+{
+	for(int i = 0; i < Inputs.size(); i++){
+		Inputs[i] = NULL;
+	}
 }
 
 //All of the following functions can be found in the neural net literature.
@@ -32,7 +61,7 @@ double Neuron::Sigmoid(double expt)
 //Returns first derivative of the sigmoid function
 double Neuron::SigmoidPrime(double expt)
 {
-	return Sigmoig(expt) * (1.0 - Sigmoid(expt));
+	return Sigmoid(expt) * (1.0 - Sigmoid(expt));
 }
 
 double Neuron::Tanh(double expt)
@@ -60,6 +89,12 @@ double Neuron::CalculateSignal()
 	return Signal;
 }
 
+void Neuron::Stimulate()
+{
+	CalculateSignal();
+	CalculateOutput();
+}
+
 /*
 The Signal of a neuron is just the dot product of its weights and the current inputs. The Output of abort
 neuron is h(Signal), where h() is some smooth function like tanh, sigmoid, etc. Here, the prescribed
@@ -70,54 +105,42 @@ Precondition: Signal has been set.
 double Neuron::CalculateOutput()
 {
 	//just map and call this neuron's activation function
-	switch(ActivationType){
+	switch(PhiFunction){
 
-			case ActivationFunction.TANH:
-					Output = Tanh(Signal);
-				break;
-				
-			case ActivationFunction.LINEAR:
-					Output = Signal;
-				break;
+		case TANH:
+				Output = Tanh(Signal);
+			break;
+			
+		case LINEAR:
+				Output = Signal;
+			break;
 
-			case ActivationFunction.SIGN:
-					Output = (Signal >= 0) ? 1.0 : -1.0;
-				break;
-				
-			case ActivationFunction.SIGMOID:
-					Output = Sigmoid(Signal);
-				break;
-		
-			default:
-					cout << "ERROR unknown output type: " << (int)ActivationType << endl;
-				break;
+		case SIGN:
+				Output = (Signal >= 0) ? 1.0 : -1.0;
+			break;
+			
+		case LOGISTIC:
+				Output = Sigmoid(Signal);
+			break;
+	
+		default:
+				cout << "ERROR unknown output type: " << (int)PhiFunction << endl;
+			break;
 	}
 	
 	return Output;
 }
 
-/*
-double Neuron::Sigmoid(const vector<double>& inputs)
-{
-	return Sigmoid( InnerProduct(inputs, this->Weights) );
-}
-
-double Neuron::Sigmoid(const vector<double>& inputs, const vector<double>& weights)
-{
-	return Sigmoid( InnerProduct(inputs, weights) );
-}
-*/
-
-double Neuron::InnerProduct(const vector<double>& inputs, const vector<double>& weights)
+double Neuron::InnerProduct(const vector<const double*>& inputs, const vector<double>& weights)
 {	
 	if(inputs.size() != weights.size()){
 			cout << "ERROR neuron inputs and weight vector sizes unequal: weights = " << weights.size() << "  inputs=" << inputs.size() << endl;
 			exit(0);
 	}
 
-	double sum = 0.0;	
+	double sum = 0.0;
 	for(int i = 0; i < inputs.size(); i++){
-		sum += inputs[i] * weights[i];
+		sum += (*inputs[i]) * weights[i];
 	}
 	
 	return sum;
