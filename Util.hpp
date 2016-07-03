@@ -9,8 +9,6 @@
 
 using namespace std;
 
-
-
 void tokenize(const string &s, char delim, vector<string> &tokens);
 void readCsv(const string& path, vector<vector<double> >& output);
 

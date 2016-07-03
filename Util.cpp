@@ -41,12 +41,12 @@ void readCsv(const string& path, vector<vector<double> >& output)
 	
 	while(getline(dataFile, line)){
 		tokens.clear();
-		_tokenize(line,',',tokens);
+		tokenize(line,',',tokens);
 		
 		//build a temp double vector containing the vals from the record, in double form
 		temp.clear();
 		for(i = 0; i < tokens.size(); i++){
-			temp.push_back(stod(tokens[i]));
+			temp.push_back(std::stod(tokens[i]));
 		}
 		
 		output.push_back(temp);
