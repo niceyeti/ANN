@@ -19,7 +19,7 @@ enum ActivationFunction {TANH, LOGISTIC, LINEAR, SIGN};
 
 class Neuron{
 	public:
-		Neuron(const Neuron& other);
+		Neuron(const Neuron& lhs);
 		Neuron(int numInputs, ActivationFunction methodType);
 		~Neuron();
 		

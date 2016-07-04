@@ -68,9 +68,18 @@ double Neuron::SigmoidPrime(double expt)
 	return Sigmoid(expt) * (1.0 - Sigmoid(expt));
 }
 
+/*
+The textbook version of Tanh is (exp(expt) - exp(-expt)) / (exp(expt) + exp(-expt)).
+
+Dividing through by e^(-expt), there is a more computationally-efficient form:
+( e^2z - 1 ) / ( e^2z + 1 )
+
+A more computationally-efficient 
+*/
 double Neuron::Tanh(double expt)
 {
-	return (exp(expt) - exp(-expt)) / (exp(expt) + exp(-expt));
+	//return (exp(expt) - exp(-expt)) / (exp(expt) + exp(-expt));
+	return (exp(2 * expt) - 1.0) / (exp(2 * expt) + 1);
 }
 
 //Returns first derivate of the tanh function
@@ -114,6 +123,10 @@ double Neuron::Phi()
 		case TANH:
 				Output = Tanh(Signal);
 			break;
+
+		case LOGISTIC:
+				Output = Sigmoid(Signal);
+			break;
 			
 		case LINEAR:
 				Output = Signal;
@@ -121,10 +134,6 @@ double Neuron::Phi()
 
 		case SIGN:
 				Output = (Signal >= 0) ? 1.0 : -1.0;
-			break;
-			
-		case LOGISTIC:
-				Output = Sigmoid(Signal);
 			break;
 	
 		default:
@@ -155,7 +164,7 @@ double Neuron::PhiPrime()
 			break;
 	
 		default:
-				cout << "ERROR unknown output type: " << (int)PhiFunction << endl;
+				cout << "ERROR unknown output type in PhiPrime(): " << (int)PhiFunction << endl;
 			break;
 	}
 
@@ -166,7 +175,6 @@ double Neuron::InnerProduct(const vector<const double*>& inputs, const vector<do
 {	
 	if(inputs.size() != weights.size()){
 			cout << "ERROR neuron inputs and weight vector sizes unequal: weights = " << weights.size() << "  inputs=" << inputs.size() << endl;
-			exit(0);
 	}
 
 	double sum = 0.0;

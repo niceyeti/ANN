@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 	//	}
 	//	cout << endl;
 	//}
-	ann.BackPropagation(dataset, 0.1);
+	ann.BackPropagation(dataset);
 
 	return 0;
 }

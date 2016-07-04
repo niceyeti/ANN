@@ -33,7 +33,7 @@ class MultiLayerNetwork{
 		void _assignRandomWeights();
 	public: 
 		void PrintWeights();
-		void BackPropagation(const vector<vector<double> >& dataset, double eta);
+		void BackPropagation(const vector<vector<double> >& dataset);
 		void Classify(const vector<double>& example);
 		void Test(vector<vector<double> >& dataset);
 		MultiLayerNetwork(int numInputs, int numHiddenUnits, int numOutputUnits);
