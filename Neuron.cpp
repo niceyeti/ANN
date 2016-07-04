@@ -6,6 +6,8 @@ Neuron::Neuron(int numInputs, ActivationFunction methodType)
 	Inputs.resize(numInputs);
 	PhiFunction = methodType;
 	Output = 0;
+	Delta = 0;
+	Signal = 0;
 }
 
 Neuron::Neuron(const Neuron& lhs)
@@ -13,6 +15,8 @@ Neuron::Neuron(const Neuron& lhs)
 	if(this != &lhs){
 		PhiFunction = lhs.PhiFunction;
 		Output = lhs.Output;
+		Delta = lhs.Delta;
+		Signal = lhs.Signal;
 		
 		Weights.resize(lhs.Weights.size());
 		//copy the weights
@@ -66,7 +70,7 @@ double Neuron::SigmoidPrime(double expt)
 
 double Neuron::Tanh(double expt)
 {
-	return (exp(expt) - exp(-expt)) / (exp(expt) - exp(-expt));
+	return (exp(expt) - exp(-expt)) / (exp(expt) + exp(-expt));
 }
 
 //Returns first derivate of the tanh function
@@ -92,7 +96,7 @@ double Neuron::CalculateSignal()
 void Neuron::Stimulate()
 {
 	CalculateSignal();
-	CalculateOutput();
+	Phi();
 }
 
 /*
@@ -102,7 +106,7 @@ h(x) is applied to the Signal and returned;
 
 Precondition: Signal has been set.
 */
-double Neuron::CalculateOutput()
+double Neuron::Phi()
 {
 	//just map and call this neuron's activation function
 	switch(PhiFunction){
@@ -129,6 +133,33 @@ double Neuron::CalculateOutput()
 	}
 	
 	return Output;
+}
+
+/*
+Returns first derivative of phi-function, using current signal as input.
+*/
+double Neuron::PhiPrime()
+{
+	double result = 0;
+	
+	//just map and call this neuron's activation function
+	switch(PhiFunction){
+
+		//only these two functions are differentiable; the others aren't intended for neurons for which this function would be called
+		case TANH:
+				result = TanhPrime(Signal);
+			break;
+			
+		case LOGISTIC:
+				result = SigmoidPrime(Signal);
+			break;
+	
+		default:
+				cout << "ERROR unknown output type: " << (int)PhiFunction << endl;
+			break;
+	}
+
+	return result;	
 }
 
 double Neuron::InnerProduct(const vector<const double*>& inputs, const vector<double>& weights)

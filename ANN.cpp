@@ -68,6 +68,26 @@ void MultiLayerNetwork::_buildTwoLayerNet(int numInputs, int numHiddenUnits, int
 }
 
 /*
+Prints weights of the entire network.
+*/
+void MultiLayerNetwork::PrintWeights()
+{
+	int i, j, l;
+	
+	for(l =0; l < _layers.size(); l++){
+		cout << "Layer " << l << " weights: " << endl;
+		for(i = 0; i < _layers[l].size(); i++){
+			for(j = 0; j < _layers[l][i].Weights.size(); j++){
+				//cout << _layers[l][i].Weights[j] << " ";
+				printf("%f ",_layers[l][i].Weights[j]);
+			}
+			cout << endl;
+		}
+	}
+}
+
+
+/*
 There are specific strategies for initializing the weights (see Haykin). Here they are just init'ed with random numbers.
 */
 void MultiLayerNetwork::_assignRandomWeights()
@@ -76,6 +96,7 @@ void MultiLayerNetwork::_assignRandomWeights()
 	
 	srand(time(NULL));
 	
+	//TODO: change the assignment to a zero-mean Gaussian, or other init per lit recommendations.
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
 			for(j = 0; j < _layers[l][i].Weights.size(); j++){
@@ -115,27 +136,30 @@ The gist:
 */
 void MultiLayerNetwork::BackPropagation(const vector<vector<double> >& dataset, double eta)
 {
-	int i, j, l;
+	string dummy;
+	int i, j, l, iterations;
 	double convergence, input, netError, prevNetError, sum, dW;
 
-	
 	//intialize the weights to random values
 	_assignRandomWeights();
-
+	
+	iterations = 0;
 	netError = 1;
 	convergence = 0;
 	//while(netError > convergenceThreshold){
 	while(true){
+		PrintWeights();
+		
 		//randomly choose an example
 		const vector<double>& example = dataset[ rand() % dataset.size() ];
 		//Run the forward pass of the network to set all neuron outputs for this sample
 		Classify(example);
-
+		
 		//calculate the final-layer deltas, which are just the signal-prime values
 		vector<Neuron>& finalLayer = _layers[_layers.size()-1];
 		for(i = 0; i < finalLayer.size(); i++){
 			//in Duda, this update is: delta = f'(net) * (t_k - z_k)
-			finalLayer[i].Delta = finalLayer[i].TanhPrime( finalLayer[i].Signal ) * (example.back() - finalLayer[i].Output);
+			finalLayer[i].Delta = finalLayer[i].PhiPrime() * (example.back() - finalLayer[i].Output);
 		}
 		
 		//backpropagate the deltas through the layers
@@ -145,9 +169,9 @@ void MultiLayerNetwork::BackPropagation(const vector<vector<double> >& dataset, 
 			for(i = 0; i < leftLayer.size(); i++){
 				//sum products over the deltas/weights from the right layer
 				for(j = 0, sum = 0.0; j < rightLayer.size(); j++){
-					sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1]); //plus one on the right, to account for the bias weight
+					sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1]); //plus one on the right, to account for the zeroeth bias weight
 				}
-				leftLayer[i].Delta = leftLayer[i].TanhPrime( leftLayer[i].Signal ) * sum;
+				leftLayer[i].Delta = leftLayer[i].PhiPrime() * sum;
 			}
 		}
 
@@ -161,16 +185,16 @@ void MultiLayerNetwork::BackPropagation(const vector<vector<double> >& dataset, 
 				if(j == 0){ //update the bias weight, which is attached to no previous neuron
 					dW = (eta * outputNeurons[i].Delta);
 				}
-				else{ //else, for all other weights the update is dependent on the output of a neuron
+				else{ //else, for all other weights the update is dependent on the output of a neuron in previous layer
 					dW = (eta * outputNeurons[i].Delta * prevNeurons[j-1].Output);
 				}
 				outputNeurons[i].Weights[j] += dW;
 			}
 		}
-		
+		//cout << "done4" << endl;
 		//now iterate and update the hidden layer weights
-		for(l = _layers.size()-2; l <= 0; l--){ //iterate the neuron layers
-			vector<Neuron> hiddenLayer = _layers[l];
+		for(l = _layers.size()-2; l >= 0; l--){
+			vector<Neuron>& hiddenLayer = _layers[l];
 			//iterate the neurons in this layer
 			for(i = 0; i < hiddenLayer.size(); i++){
 				//iterate the weights for this neuron
@@ -179,31 +203,35 @@ void MultiLayerNetwork::BackPropagation(const vector<vector<double> >& dataset, 
 						dW = eta * hiddenLayer[i].Weights[j] * hiddenLayer[i].Delta;
 					}
 					else{
-						//if this is the first hidden layer, the input comes from the example; else, it comes from the previous layer's output
+						//if this is the first hidden layer, the input comes from the example
 						if(l == 0){
-							input = example[j-1];  //minus one, for the sake of skipping the bias weight
+							input = example[j-1];
 						}
+						//else, it comes from the previous layer's output
 						else{
-							input = hiddenLayer[j-1].Signal;  //minus one, for the sake of skipping the bias weight
+							input = _layers[l-1][j-1].Output;  //minus one, for the sake of skipping the bias weight
 						}
 						dW = eta * hiddenLayer[i].Weights[j] * hiddenLayer[i].Delta * input;
 					}
 					//weight update
+					//printf("%f\n",hiddenLayer[i].Weights[j]);
+					//cout << "layer " << l << " update " << i << "," << j << "  : " << dW << endl;
 					hiddenLayer[i].Weights[j] += dW;
+					//printf("%f\n",hiddenLayer[i].Weights[j]);
 				}
 			}
 		}
-
+		//cout << "done5" << endl;
 		//track error info
 		prevNetError = netError;
 		netError = 0.0;
 		for(i = 0; i < _layers[_layers.size()-1].size(); i++){
 			netError += _layers[_layers.size()-1][i].Delta;
 		}
-		cout << "Error: " << netError << "\tDelta: " << (prevNetError - netError) << endl;
-		
+		cout << iterations << ") Error: " << netError << "\tDelta: " << (prevNetError - netError) << endl;
+		iterations++;
+		//cin >> dummy;
 		//update eta, the learning rate
-		
 	}
 }
 
@@ -223,10 +251,10 @@ void MultiLayerNetwork::Classify(const vector<double>& example)
 		}
 	}
 	
-	//stimulate the neurons, layer by layer left-to-right
+	//feed-forward: stimulate the neurons, layer by layer left-to-right
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
-			_layers[l][i].CalculateOutput();
+			_layers[l][i].Stimulate();
 		}
 	}
 	
@@ -234,8 +262,7 @@ void MultiLayerNetwork::Classify(const vector<double>& example)
 }
 
 void MultiLayerNetwork::Test(vector<vector<double> >& dataset)
-{
-	
+{	
 	for(int i = 0; i < dataset.size(); i++){
 		Classify(dataset[i]);
 	}

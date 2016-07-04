@@ -22,7 +22,6 @@ class Neuron{
 		Neuron(const Neuron& other);
 		Neuron(int numInputs, ActivationFunction methodType);
 		~Neuron();
-
 		
 		vector<double> Weights;
 		vector<const double*> Inputs; //inputs are pointer-type, so that a single input may be demuxed to multiple neurons
@@ -33,7 +32,8 @@ class Neuron{
 		void NullifyInputPtrs();
 		void Stimulate();
 		double CalculateSignal();
-		double CalculateOutput();
+		double Phi();
+		double PhiPrime();
 		double InnerProduct(const vector<const double*>& inputs, const vector<double>& weights);
 		//All of the following functions can be found in the neural net literature.
 		double Sigmoid(double expt);
