@@ -32,10 +32,11 @@ class MultiLayerNetwork{
 		void _buildTwoLayerNet(int numInputs, int numHiddenUnits, int numOutputUnits);
 		void _assignRandomWeights();
 	public: 
+		const vector<Neuron>& GetOutput(); //client gets the output by reading the output layer neurons' outputs
 		void PrintWeights();
 		void BackPropagation(const vector<vector<double> >& dataset);
 		void Classify(const vector<double>& example);
-		void Test(vector<vector<double> >& dataset);
+		void Test(const string& outputPath, vector<vector<double> >& testSet);
 		MultiLayerNetwork(int numInputs, int numHiddenUnits, int numOutputUnits);
 		~MultiLayerNetwork();
 		void Clear();

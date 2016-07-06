@@ -32,7 +32,7 @@ def getClassExamples(examples, binaryClass):
 """
 Given an inputPath to some csv data file, reads the data into a list of lists of floats and returns this list.
 """
-def ReadExamples(inputPath):
+def ReadDataset(inputPath):
 	ifile = open(inputPath,"r")
 	examples = []
 	
@@ -66,16 +66,16 @@ def PlotExamples(examples,outputPath):
 	Z2 = []
 	
 	#get the positive examples; only the sign of the class label is used for binary classification
-	X1 = [example[0] for example in examples if example[-1] > 0]
-	Y1 = [example[1] for example in examples if example[-1] > 0]
+	X1 = [example[0] for example in examples if example[-1] > 0.9]
+	Y1 = [example[1] for example in examples if example[-1] > 0.9]
 	if dim == 3:
-		Z1 = [example[2] for example in examples if example[-1] > 0]
+		Z1 = [example[2] for example in examples if example[-1] > 0.9]
 
 	#get the negative examples, again via the negative sign only
-	X2 = [example[0] for example in examples if example[-1] < 0]
-	Y2 = [example[1] for example in examples if example[-1] < 0]
+	X2 = [example[0] for example in examples if example[-1] < -0.9]
+	Y2 = [example[1] for example in examples if example[-1] < -0.9]
 	if dim == 3:
-		Z2 = [example[2] for example in examples if example[-1] < 0]	
+		Z2 = [example[2] for example in examples if example[-1] < -0.9]	
 	
 	#plot the respective class examples
 	if dim == 2:
@@ -113,7 +113,7 @@ ofilePath = sys.argv[2].split("=")[1].strip()
 
 print("Processing data from: "+ifilePath)
 #read the example vectors
-examples = ReadExamples(ifilePath)
+examples = ReadDataset(ifilePath)
 #plot the examples; the dimension will be inferred from the size of the example vectors
 PlotExamples(examples,ofilePath)
 

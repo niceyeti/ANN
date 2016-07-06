@@ -138,13 +138,22 @@ which this mirrors.
 Another very terse source: http://www.cse.unsw.edu.au/~cs9417ml/MLP2/BackPropagation.html
 
 The gist:
-	Iterate over the examples e, doing the following:
-	Forward compute the activation for all neurons using the e
-	-Calculate the error at the output nodes: delta_o = (t_k - z_k) * phi_prime(signal)
-	-Calculate the error at the hidden layer: dW = phi_prime(signal) * Sigma( delta_o * w_io )
-	-Update the weights for the hidden layer, using these dW's
-	-Update the weights for the final layer, using delta
-	-Iterate, until the error for the network falls below some threshold. The most straightforward error is simply the sum-of-squares of the delta_o
+	Initialization:
+		Initialize the weights to random/Gaussian values with zero mean and variance such that the standard deviation lies
+		at the transition between the linear and saturated parts of the activation function (sigmoid or tanh).
+
+	Algorithm:
+		Iterate over the examples e, doing the following:
+		Forward compute the activation for all neurons using the e
+		-Calculate the error at the output nodes: delta_o = (t_k - z_k) * phi_prime(signal)
+		-Calculate the error at the hidden layer: dW = phi_prime(signal) * Sigma( delta_o * w_io )
+		-Update the weights for the hidden layer, using these dW's
+		-Update the weights for the final layer, using delta
+		-Iterate, until the error for the network falls below some threshold. The most straightforward error is simply the sum-of-squares of the delta_o
+
+	Stopping criteria: 
+		Ad hoc for now. Can use maxIterations, error-reduction-threshold, or otherwise.
+		
 */
 void MultiLayerNetwork::BackPropagation(const vector<vector<double> >& dataset)
 {
@@ -165,8 +174,8 @@ void MultiLayerNetwork::BackPropagation(const vector<vector<double> >& dataset)
 	convergence = 0;
 	_eta = 0.1;
 	//while(netError > convergenceThreshold){
-	while(true){
-		PrintWeights();
+	while(iterations < 100000){
+		//PrintWeights();
 		
 		//randomly choose an example
 		const vector<double>& example = dataset[ rand() % dataset.size() ];
@@ -254,19 +263,20 @@ void MultiLayerNetwork::BackPropagation(const vector<vector<double> >& dataset)
 		errorHistory[ringIndex] = netError;
 		ringIndex = (ringIndex + 1) % 50;
 		
-		cout << iterations << ") Error: " << netError << "\tDelta: " << (prevNetError - netError) << endl;
-		cout << "Example: " << example.back() << "  Output: " << _layers[_layers.size()-1][0].Output << endl;
 		iterations++;
-		if(iterations % 50 == 49){
-			//average the error of the last 50 examples learned
-			double avgError = 0.0;
-			for(i = 0; i < errorHistory.size(); i++){
-				avgError += errorHistory[i];
-			}
-			avgError /= 50.0;
-			cout << "Iteration " << iterations << " avg error: " << avgError << endl;
-			///cin >> dummy;
-		}
+		cout << "\r" <<  iterations << ") Error: " << netError << "\tDelta: " << (prevNetError - netError) << "                  " << flush;
+		//cout << "Example: " << example.back() << "  Output: " << _layers[_layers.size()-1][0].Output << endl;
+		//iterations++;
+		//if(iterations % 50 == 49){
+		//	//average the error of the last 50 examples learned
+		//	double avgError = 0.0;
+		//	for(i = 0; i < errorHistory.size(); i++){
+		//		avgError += errorHistory[i];
+		//	}
+		//	avgError /= 50.0;
+		//	cout << "Iteration " << iterations << " avg error: " << avgError << endl;
+		//	///cin >> dummy;
+		//}
 		
 		//update _eta, the learning rate
 	}
@@ -277,7 +287,7 @@ Network outputs need not be binary, so the caller must read Output vector to get
 All this function does is set the input pointers to the example values, then calls Stimulate() layer by layer
 in feed forward fashion to propagate the input.
 
-@example: a vector of feature values, along with a +/-1 to indicate class membership.
+@example: a vector feature values of at least d-dimensions, where d is the number of inputs to the network.
 */
 void MultiLayerNetwork::Classify(const vector<double>& example)
 {
@@ -292,8 +302,8 @@ void MultiLayerNetwork::Classify(const vector<double>& example)
 	
 	//fix the first layer's inputs to the example
 	for(i = 0; i < _layers[0].size(); i++){
-		for(j = 0; j < example.size(); j++){
-			_layers[0][i].Inputs[j+1] = &example[j]; //plus one, to offset for the bias
+		for(j = 1; j < _layers[0][i].Inputs.size(); j++){
+			_layers[0][i].Inputs[j] = &example[j-1]; //minus one, to offset for the bias
 		}
 	}
 	
@@ -307,9 +317,39 @@ void MultiLayerNetwork::Classify(const vector<double>& example)
 	//don't return anything, just let the caller read the outputs, for now.
 }
 
-void MultiLayerNetwork::Test(vector<vector<double> >& dataset)
+//Client reads the network output by simply reading the output neurons for themselves.
+const vector<Neuron>& MultiLayerNetwork::GetOutput()
 {
-	for(int i = 0; i < dataset.size(); i++){
-		Classify(dataset[i]);
+	return _layers.back();
+}
+
+/*
+Tests a dataset, and outputs the predicting for each vector to the file given by the outputPath.
+
+@testSet: A set of d-dimensional vectors with no class labels
+@outputPath: The output path to which each testSet vector shall be written in csv, appended with its
+predicted class label. 
+*/
+void MultiLayerNetwork::Test(const string& outputPath, vector<vector<double> >& testSet)
+{
+	string temp;
+	char buf[64] = {'\0'};
+	ofstream outputFile(outputPath, ios::out);
+
+	for(int i = 0; i < testSet.size(); i++){
+		Classify(testSet[i]);
+		
+		temp.clear();
+		for(int j = 0; j < testSet[i].size(); j++){
+			sprintf(buf,"%lf,",testSet[i][j]);
+			temp += buf;
+		}
+		
+		sprintf(buf,"%lf\n",_layers.back()[0].Output);
+		temp += buf;
+		
+		outputFile << temp;
 	}
+	
+	outputFile.close();
 }

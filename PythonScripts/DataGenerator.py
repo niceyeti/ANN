@@ -54,19 +54,28 @@ Writes a list of examples to csv. Class membership is not passed, and expected t
 @ofile: an output file handle
 @examples: A list of example vectors
 @dim: 2 or 3, representing the dimension of the examples
+@isTestData: If this is test data, not training data, write without the class labels
 """
-def WriteExamples(ofile,examples,dim):
+def WriteExamples(ofile,examples,dim,isTestData=False):
 	for example in examples:
-		if dim == 2:
-			record = str(example[0])+","+str(example[1])+","+str(example[2])
-		elif dim == 3:
-			record = str(example[0])+","+str(example[1])+","+str(example[2])+","+str(example[3])
+		if not isTestData: #not test data, so output data with class labels
+			if dim == 2:
+				record = str(example[0])+","+str(example[1])+","+str(example[2])
+			elif dim == 3:
+				record = str(example[0])+","+str(example[1])+","+str(example[2])+","+str(example[3])
+		else:
+			if dim == 2:
+				record = str(example[0])+","+str(example[1])
+			elif dim == 3:
+				record = str(example[0])+","+str(example[1])+","+str(example[2])
+
 		ofile.write(record+"\n")
 	
 def usage():
-	print("Usage: python DataGenerator.py -ofile=[path to output file] -dim=[2d or 3d for desired dimensionality] -n=[number of data points to generate]")
+	print("Usage: python DataGenerator.py -ofile=[path to output file] -dim=[2d or 3d for desired dimensionality] -n=[number of data points to generate] -isTest")
+	print("The isTest parameter is optional, but can be passed to indicate the data should be output without class labels.")
 	
-if len(sys.argv) != 4:
+if len(sys.argv) < 4:
 	print("ERROR incorrect number of command line parameters")
 	usage()
 	exit()
@@ -82,6 +91,7 @@ if "-n=" not in sys.argv[3]:
 	print("ERROR no n param passed")
 	usage()
 	exit()
+isTest = "-isTest" in sys.argv
 
 ofile = open(sys.argv[1].split("=")[1],"w+")
 dim = int(sys.argv[2].split("=")[1].strip().replace("d",""))
@@ -99,8 +109,8 @@ for instance in negativeInstances:
 	instance.append(-1.0)
 
 #write out the data; the order is NOT randomized, outputting contiguous blocks of + and - examples
-WriteExamples(ofile,positiveInstances,dim)
-WriteExamples(ofile,negativeInstances,dim)
+WriteExamples(ofile,positiveInstances,dim,isTest)
+WriteExamples(ofile,negativeInstances,dim,isTest)
 	
 ofile.close()
 	
