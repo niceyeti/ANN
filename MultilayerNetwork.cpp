@@ -1,4 +1,4 @@
-#include "ANN.hpp"
+#include "MultilayerNetwork.hpp"
 
 MultilayerNetwork::MultilayerNetwork(int numInputs, int numHiddenUnits, int numOutputUnits)
 {

@@ -1,28 +1,26 @@
 #include "ANN.hpp"
 
-MultiLayerNetwork::MultiLayerNetwork(int numInputs, int numHiddenUnits, int numOutputUnits)
+MultilayerNetwork::MultilayerNetwork(int numInputs, int numHiddenUnits, int numOutputUnits)
 {
 	_buildTwoLayerNet(numInputs,numHiddenUnits, numOutputUnits);
 }
 
-MultiLayerNetwork::~MultiLayerNetwork()
+MultilayerNetwork::~MultilayerNetwork()
 {
 	_layers.clear();
 }
 
-void MultiLayerNetwork::Clear()
+void MultilayerNetwork::Clear()
 {
 	_layers.clear();
 	_biases.clear();
 }
 
 //Just a utility for nullifying the input ptrs of some layer
-void MultiLayerNetwork::_nullifyLayer(vector<Neuron>& layer)
-{
-	int i, j;
-	
-	for(i = 0; i < layer.size(); i++){
-		for(j = 0; j < layer[i].Inputs.size(); j++){
+void MultilayerNetwork::_nullifyLayer(vector<Neuron>& layer)
+{	
+	for(int i = 0; i < layer.size(); i++){
+		for(int j = 0; j < layer[i].Inputs.size(); j++){
 			layer[i].Inputs[j] = NULL;
 		}
 	}
@@ -37,7 +35,7 @@ where the additional input is for the bias.
 @numHiddenUnits: Number of hidden units in the hidden layer
 @numOutputUnits: Nmber of output units
 */
-void MultiLayerNetwork::_buildTwoLayerNet(int dataDimension, int numHiddenUnits, int numOutputUnits)
+void MultilayerNetwork::_buildTwoLayerNet(int dataDimension, int numHiddenUnits, int numOutputUnits)
 {
 	int i, j;
 	
@@ -85,7 +83,7 @@ void MultiLayerNetwork::_buildTwoLayerNet(int dataDimension, int numHiddenUnits,
 /*
 Prints weights of the entire network.
 */
-void MultiLayerNetwork::PrintWeights()
+void MultilayerNetwork::PrintWeights()
 {
 	int i, j, l;
 	
@@ -105,7 +103,7 @@ void MultiLayerNetwork::PrintWeights()
 /*
 There are specific strategies for initializing the weights (see Haykin). Here they are just init'ed with random numbers.
 */
-void MultiLayerNetwork::_assignRandomWeights()
+void MultilayerNetwork::_assignRandomWeights()
 {
 	int i, j, l;
 	
@@ -135,7 +133,7 @@ by that single example. Hence this function is stateful, in that it assumes the 
 outputs have been driven by a specific example. The reason this is public is for clients
 that do online learning, like in approximate Q-learning.
 */
-void MultiLayerNetwork::BackpropagateError(const vector<double>& example)
+void MultilayerNetwork::BackpropagateError(const vector<double>& example)
 {
 	int i, j, l;
 	double sum;
@@ -166,7 +164,7 @@ Like Backpropagate(), this publicly exposes the weight-update step, after the ne
 driven with Classify() and the error back-propagated by Backpropagate(). Again, exposing this publicly
 is meant as a convenience for online learners, like in Q-learning.
 */
-void MultiLayerNetwork::UpdateWeights(const vector<double>& example)
+void MultilayerNetwork::UpdateWeights(const vector<double>& example)
 {
 	double dW, input;
 
@@ -224,7 +222,7 @@ The gist:
 		Ad hoc for now. Can use maxIterations, error-reduction-threshold, or otherwise.
 		
 */
-void MultiLayerNetwork::BatchTrain(const vector<vector<double> >& dataset)
+void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset)
 {
 	string dummy;
 	int iterations, ringIndex;
@@ -281,7 +279,7 @@ void MultiLayerNetwork::BatchTrain(const vector<vector<double> >& dataset)
 Just a convenient wrapper for learning from a single example: drive the outputs, backpropagate
 the error, and update the weights based off the single example.
 */
-void MultiLayerNetwork::Backpropagate(const vector<double>& example)
+void MultilayerNetwork::Backpropagate(const vector<double>& example)
 {
 	//Run the forward pass of the network to set all neuron outputs for this sample
 	Classify(example);
@@ -298,7 +296,7 @@ just sums across the error across all output nodes.
 In the future this could be factored or paramterized somehow to support error measures for
 different gradient definitions.
 */
-double MultiLayerNetwork::GetNetError()
+double MultilayerNetwork::GetNetError()
 {
 	double netError = 0.0;
 	for(int i = 0; i < _layers[_layers.size()-1].size(); i++){
@@ -315,7 +313,7 @@ in feed forward fashion to propagate the input.
 
 @example: a vector feature values of at least d-dimensions, where d is the number of inputs to the network.
 */
-void MultiLayerNetwork::Classify(const vector<double>& example)
+void MultilayerNetwork::Classify(const vector<double>& example)
 {
 	int l, i, j;
 
@@ -344,7 +342,7 @@ void MultiLayerNetwork::Classify(const vector<double>& example)
 }
 
 //Client reads the network output by simply reading the output neurons for themselves.
-const vector<Neuron>& MultiLayerNetwork::GetOutput()
+const vector<Neuron>& MultilayerNetwork::GetOutput()
 {
 	return _layers.back();
 }
@@ -356,7 +354,7 @@ Tests a dataset, and outputs the predicting for each vector to the file given by
 @outputPath: The output path to which each testSet vector shall be written in csv, appended with its
 predicted class label.
 */
-void MultiLayerNetwork::Test(const string& outputPath, vector<vector<double> >& testSet)
+void MultilayerNetwork::Test(const string& outputPath, vector<vector<double> >& testSet)
 {
 	string temp;
 	char buf[64] = {'\0'};

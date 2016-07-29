@@ -6,7 +6,7 @@
 using namespace std;
 
 /*
-Implements a basic, multilayer ANN with sigmoidal units.
+Implements a basic, Multilayer ANN with sigmoidal units.
 
 This is the most generic form of ANN, and is based directly off of the BackPropagation methods mentioned in
 Duda "Pattern Classification" 6.3. It isn' intended to be efficient or extensible, just a proto to learn the basics.
@@ -22,7 +22,7 @@ This is just a single-purpose architecture, or learning about ANN's.
 As far as software patterns, ANN's are highly suited to using some builder (Builder, Factory, etc.) to construct and return ANN's with different
 architectures (numbers of hidden layers, num hidden units/outputs, etc.), under a single api/interface.
 */
-class MultiLayerNetwork{
+class MultilayerNetwork{
 	private:
 		double _eta;
 		vector<double> _biases;
@@ -41,7 +41,7 @@ class MultiLayerNetwork{
 		void Backpropagate(const vector<double>& example);
 		void BatchTrain(const vector<vector<double> >& dataset);
 		void Test(const string& outputPath, vector<vector<double> >& testSet);
-		MultiLayerNetwork(int numInputs, int numHiddenUnits, int numOutputUnits);
-		~MultiLayerNetwork();
+		MultilayerNetwork(int numInputs, int numHiddenUnits, int numOutputUnits);
+		~MultilayerNetwork();
 		void Clear();
 };

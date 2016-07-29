@@ -1,10 +1,10 @@
-#include "ANN.hpp"
+#include "MultilayerNetwork.hpp"
 #include "Util.hpp"
 
 int main(int argc, char** argv)
 {
 	string path;
-	MultiLayerNetwork ann(2, 8, 1);
+	MultilayerNetwork nn(2, 8, 1);
 	double eta = 0.1;
 	vector<vector<double> > dataset;
 	
@@ -16,13 +16,13 @@ int main(int argc, char** argv)
 	//	}
 	//	cout << endl;
 	//}
-	ann.BatchTrain(dataset);
+	nn.BatchTrain(dataset);
 
 	dataset.clear();
 	path = "./Data/test2d.csv";
 	readCsv(path, dataset);
 	path = "./Data/predictions2d.csv";
-	ann.Test(path, dataset);
+	nn.Test(path, dataset);
 	
 	return 0;
 }
