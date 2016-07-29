@@ -135,7 +135,7 @@ by that single example. Hence this function is stateful, in that it assumes the 
 outputs have been driven by a specific example. The reason this is public is for clients
 that do online learning, like in approximate Q-learning.
 */
-void MultiLayerNetwork::BackpropagateError(const vector<double>& example)
+void MultiLayerNetwork::BackropagateError(const vector<double>& example)
 {
 	int i, j, l;
 	double sum;

@@ -36,7 +36,7 @@ class MultiLayerNetwork{
 		void PrintWeights();
 		double GetNetError();
 		void Classify(const vector<double>& example);
-		void UpdateWeights(const vector<double>& example);
+		void UpdateWeights();
 		void BackpropagateError(const vector<double>& example);
 		void Backpropagate(const vector<double>& example);
 		void BatchTrain(const vector<vector<double> >& dataset);

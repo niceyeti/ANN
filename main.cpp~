@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 	//	}
 	//	cout << endl;
 	//}
-	ann.BatchTrain(dataset);
+	ann.BackPropagation(dataset);
 
 	dataset.clear();
 	path = "./Data/test2d.csv";
