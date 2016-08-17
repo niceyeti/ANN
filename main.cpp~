@@ -1,4 +1,4 @@
-#include "ANN.hpp"
+#include "MultilayerNetwork.hpp"
 #include "Util.hpp"
 
 int main(int argc, char** argv)

@@ -35,8 +35,8 @@ class Neuron{
 		void NullifyInputPtrs();
 		void Stimulate();
 		double CalculateSignal();
-		void ValidateSignal();
-		void ValidateOutput();
+		double ValidateSignal();
+		double ValidateOutput();
 		const char* FpClassify(double x);
 		double Phi();
 		double PhiPrime();

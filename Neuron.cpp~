@@ -101,6 +101,7 @@ of popular activations and their derivatives.
 */
 double Neuron::Tanh(double expt)
 {
+	//return (exp(expt) - exp(-expt)) / (exp(expt) + exp(-expt));
 	return (2.0 / (1.0 + exp(-2.0*expt))) - 1.0;
 }
 

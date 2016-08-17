@@ -4,7 +4,7 @@
 int main(int argc, char** argv)
 {
 	string path;
-	MultilayerNetwork nn(2, 8, 1);
+	MultilayerNetwork nn(2, 2, 8, 1);
 	double eta = 0.1;
 	vector<vector<double> > dataset;
 	
