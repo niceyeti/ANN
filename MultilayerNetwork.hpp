@@ -41,7 +41,7 @@ class MultilayerNetwork{
 		void _assignRandomWeights();
 	public:
 		bool IsOutputNormal();
-		void SetHiddenLayerFunction(ActivationFunction functionType);
+		void SetHiddenLayerFunction(ActivationFunction functionType, int layer=0);
 		void SetOutputLayerFunction(ActivationFunction functionType);
 		void SetEta(double newEta);
 		void InitializeWeights();

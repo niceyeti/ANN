@@ -5,7 +5,6 @@ MultilayerNetwork::MultilayerNetwork()
 
 }
 
-
 MultilayerNetwork::MultilayerNetwork(int numInputs, int numLayers, int numHiddenUnits, int numOutputUnits)
 {
 	BuildNet(numInputs, numLayers, numHiddenUnits, numOutputUnits);
@@ -16,17 +15,17 @@ MultilayerNetwork::~MultilayerNetwork()
 	_layers.clear();
 }
 
-void MultilayerNetwork::SetHiddenLayerFunction(ActivationFunction functionType)
+void MultilayerNetwork::SetHiddenLayerFunction(ActivationFunction activationType, int layer)
 {
-	for(int i = 0; i < _layers[0].size(); i++){
-		_layers[0][i].PhiFunction = functionType;
+	for(int i = 0; i < _layers[layer].size(); i++){
+		_layers[layer][i].PhiFunction = activationType;
 	}
 }
 
-void MultilayerNetwork::SetOutputLayerFunction(ActivationFunction functionType)
+void MultilayerNetwork::SetOutputLayerFunction(ActivationFunction activationType)
 {
-	for(int i = 0; i < _layers[1].size(); i++){
-		_layers[1][i].PhiFunction = functionType;
+	for(int i = 0; i < _layers[_layers.size()-1].size(); i++){
+		_layers[_layers.size()-1][i].PhiFunction = activationType;
 	}
 }
 
@@ -72,7 +71,7 @@ void MultilayerNetwork::BuildNet(int numInputs, int numLayers, int numHiddenUnit
 	//init the layers
 	_layers.resize(numLayers);
 
-	//set up the hidden units
+	//lay out the hidden units
 	for(i = 0; i < (numLayers-1); i++){
 		_layers[i].resize(numHiddenUnits, Neuron(numInputs + 1, TANH) );  //plus one for the biases
 		_nullifyLayer(_layers[i]);
@@ -81,9 +80,9 @@ void MultilayerNetwork::BuildNet(int numInputs, int numLayers, int numHiddenUnit
 	//set up the output units
 	_layers[_layers.size()-1].resize(numOutputUnits, Neuron(numHiddenUnits + 1, TANH) ); //plus one for the biases
 	_nullifyLayer(_layers[1]);
-	
+
 	//connect the layers
-	for(l = numLayers-1; l >= 0; l--){
+	for(l = numLayers - 1; l > 0; l--){
 		vector<Neuron>& prevLayer = _layers[l-1];
 		vector<Neuron>& curLayer = _layers[l];
 		for(i = 0; i < curLayer.size(); i++){
