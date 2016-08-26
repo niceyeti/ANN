@@ -34,12 +34,14 @@ architectures (numbers of hidden layers, num hidden units/outputs, etc.), under 
 class MultilayerNetwork{
 	private:
 		double _eta;
+		double _momentum;
 		vector<double> _biases;
 		vector<vector<Neuron> > _layers;
 		//eta performs best with some decaying value updates
 		void _nullifyLayer(vector<Neuron>& layer);
 		void _assignRandomWeights();
 	public:
+		void SetMomentum(double momentum);
 		bool IsOutputNormal();
 		void SetHiddenLayerFunction(ActivationFunction functionType, int layer=0);
 		void SetOutputLayerFunction(ActivationFunction functionType);

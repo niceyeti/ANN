@@ -3,7 +3,16 @@
 Neuron::Neuron(int numInputs, ActivationFunction methodType)
 {
 	Weights.resize(numInputs);
+	for(int i = 0; i < Weights.size(); i++){
+		Weights[i].w = 0;
+		Weights[i].dw = 0;
+	}
+
 	Inputs.resize(numInputs);
+	for(int i = 0; i < Inputs.size(); i++){
+		Inputs[i] = NULL;
+	}
+
 	PhiFunction = methodType;
 	Output = 0;
 	Delta = 0;
@@ -21,7 +30,8 @@ Neuron::Neuron(const Neuron& lhs)
 		Weights.resize(lhs.Weights.size());
 		//copy the weights
 		for(int i = 0; i < lhs.Weights.size(); i++){
-			Weights[i] = lhs.Weights[i];
+			Weights[i].w = lhs.Weights[i].w;
+			Weights[i].dw = lhs.Weights[i].dw;
 		}
 		
 		Inputs.resize(lhs.Inputs.size());
@@ -101,7 +111,6 @@ of popular activations and their derivatives.
 */
 double Neuron::Tanh(double expt)
 {
-	//return (exp(expt) - exp(-expt)) / (exp(expt) + exp(-expt));
 	return (2.0 / (1.0 + exp(-2.0*expt))) - 1.0;
 }
 
@@ -199,7 +208,7 @@ double Neuron::PhiPrime()
 	return result;	
 }
 
-double Neuron::InnerProduct(const vector<const double*>& inputs, const vector<double>& weights)
+double Neuron::InnerProduct(const vector<const double*>& inputs, const vector<Weight>& weights)
 {
 	double sum = 0.0;
 
@@ -208,7 +217,7 @@ double Neuron::InnerProduct(const vector<const double*>& inputs, const vector<do
 	}
 
 	for(int i = 0; i < inputs.size(); i++){
-		sum += (*inputs[i]) * weights[i];
+		sum += (*inputs[i]) * weights[i].w;
 	}
 	
 	return sum;

@@ -2,11 +2,15 @@
 
 MultilayerNetwork::MultilayerNetwork()
 {
-
+	_momentum = 0;
+	_eta = 0;
 }
 
 MultilayerNetwork::MultilayerNetwork(int numInputs, int numLayers, int numHiddenUnits, int numOutputUnits)
 {
+	_momentum = 0;
+	_eta = 0.1;
+
 	BuildNet(numInputs, numLayers, numHiddenUnits, numOutputUnits);
 }
 
@@ -127,7 +131,7 @@ void MultilayerNetwork::PrintWeights()
 		for(i = 0; i < _layers[l].size(); i++){
 			for(j = 0; j < _layers[l][i].Weights.size(); j++){
 				//cout << _layers[l][i].Weights[j] << " ";
-				printf("%f ",_layers[l][i].Weights[j]);
+				printf("%f ",_layers[l][i].Weights[j].w);
 			}
 			cout << endl;
 		}
@@ -146,9 +150,9 @@ void MultilayerNetwork::_assignRandomWeights()
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
 			for(j = 0; j < _layers[l][i].Weights.size(); j++){
-				_layers[l][i].Weights[j] = ((double)(rand() % 100)) / 50.0;
+				_layers[l][i].Weights[j].w = ((double)(rand() % 100)) / 50.0;
 				if(rand() % 2 == 0){
-					_layers[l][i].Weights[j] *= -1.0; //flip the sign 50% of the time
+					_layers[l][i].Weights[j].w *= -1.0; //flip the sign 50% of the time
 				}
 			}
 		}
@@ -158,6 +162,22 @@ void MultilayerNetwork::_assignRandomWeights()
 	for(i = 0; i < _biases.size(); i++){
 		_biases[i] = 1.0;
 	}
+}
+
+/*
+Momentum must lie between 0 and 1.0 for convergence.
+Recommend value is ~0.5. See Haykin.
+
+Momentum doesn't just speed up updates, it is claimed to help overcome local minima, as opposed
+to using no momentum.
+*/
+void MultilayerNetwork::SetMomentum(double momentum)
+{
+	if(momentum > 1.0){
+		cout << "WARNING momentum values > 1.0 will cause weights to diverge" << endl;
+	}
+
+	_momentum = momentum;
 }
 
 //Validates output of network is not nan, inf, etc. This is critical so these
@@ -205,7 +225,7 @@ void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, double 
 		for(i = 0; i < leftLayer.size(); i++){
 			//sum products over the deltas/weights from the right layer
 			for(j = 0, sum = 0.0; j < rightLayer.size(); j++){
-				sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1]); //plus one on the right, to account for the zeroeth bias weight
+				sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1].w); //plus one on the right, to account for the zeroeth bias weight
 			}
 			leftLayer[i].Delta = leftLayer[i].PhiPrime() * sum;
 		}
@@ -219,7 +239,7 @@ is meant as a convenience for online learners, like in Q-learning.
 */
 void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, double target)
 {
-	double dW, input;
+	double dw, input;
 
 	if(!IsOutputNormal()){
 		cout << "ERROR one or more outputs abnormal, ABORTING UPDATEWEIGHTS()" << endl;
@@ -233,7 +253,7 @@ void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, double targe
 			//iterate the weights for this neuron
 			for(int j = 0; j < _layers[l][i].Weights.size(); j++){
 				if(j == 0){ //for j==0, the bias weight is not associated with a previous neuron; the input is implicitly a constant 1.0
-					dW = _eta * _layers[l][i].Weights[0] * _layers[l][i].Delta;
+					dw = _eta * _layers[l][i].Weights[0].w * _layers[l][i].Delta;
 				}
 				else{
 					//if this is the first hidden layer, the input comes from the input, rather than a previous neuron layer
@@ -244,12 +264,19 @@ void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, double targe
 					else{
 						input = _layers[l-1][j-1].Output;  //minus one, for the sake of skipping the bias weight
 					}
-					dW = _eta * _layers[l][i].Delta * input;
+					dw = _eta * _layers[l][i].Delta * input;
 				}
 				//weight update
 				//printf("%f\n",_layers[l][i].Weights[j]);
 				//cout << "layer " << l << " update " << i << "," << j << "  : " << dW << endl;
-				_layers[l][i].Weights[j] += dW;
+				if(_momentum == 0){ //no momentum, so ignore previous dw
+					_layers[l][i].Weights[j].w += dw;
+				}
+				else{
+					//see Haykin, Neural Nets. For momentum, the previous dw is used to add momentum to the weight update.
+					_layers[l][i].Weights[j].w = _momentum * _layers[l][i].Weights[j].dw + dw + _layers[l][i].Weights[j].w;
+					_layers[l][i].Weights[j].dw = dw;
+				}
 				//printf("%f\n",_layers[l][i].Weights[j]);
 			}
 		}
@@ -283,11 +310,11 @@ The gist:
 void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset)
 {
 	string dummy;
-	int iterations, ringIndex;
-	double convergence, input, netError, prevNetError;
+	int iterations, minIteration, ringIndex;
+	double convergence, input, netError, minError, prevNetError;
 	vector<double> errorHistory;
 	
-	//intialize the weights to random values
+	//initialize the weights to random values
 	InitializeWeights();
 	
 	//sliding error-window for viewing long term error changes
@@ -296,10 +323,13 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset)
 	
 	iterations = 0;
 	netError = 1;
+	minError = 10000000;
 	convergence = 0;
 	_eta = 0.1;
+	_momentum = 0.0; //reportedly a good value (see Haykin)
+
 	//while(netError > convergenceThreshold){
-	while(iterations < 100000){
+	while(iterations < 500000){
 		//PrintWeights();
 		
 		//randomly choose an example
@@ -311,26 +341,30 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset)
 		prevNetError = netError;
 		netError = GetNetError();
 		//save this error level
-		errorHistory[ringIndex] = netError;
-		ringIndex = (ringIndex + 1) % 50;
+		errorHistory[ringIndex] = abs(netError);
+		ringIndex = (ringIndex + 1) % (int)errorHistory.size();
 		
 		iterations++;
-		cout << "\r" <<  iterations << ") Error: " << netError << "\tDelta: " << (prevNetError - netError) << "                  " << flush;
-		//cout << "Example: " << example.back() << "  Output: " << _layers[_layers.size()-1][0].Output << endl;
-		//iterations++;
-		//if(iterations % 50 == 49){
-		//	//average the error of the last 50 examples learned
-		//	double avgError = 0.0;
-		//	for(i = 0; i < errorHistory.size(); i++){
-		//		avgError += errorHistory[i];
-		//	}
-		//	avgError /= 50.0;
-		//	cout << "Iteration " << iterations << " avg error: " << avgError << endl;
-		//	///cin >> dummy;
-		//}
+		if(iterations % 50 == 49){
+			//average the error of the last 50 examples learned
+			double avgError = 0.0;
+			for(int i = 0; i < errorHistory.size(); i++){
+				avgError += errorHistory[i];
+				errorHistory[i] = 0;
+			}
+			avgError /= (double)errorHistory.size();
+			//cout << "\rIteration " << iterations << " avg error: " << avgError << "                " << flush;
+			cout << "Iteration " << iterations << " avg error: " << avgError << "                " << endl;
+			if(avgError < minError){
+				minError = avgError;
+				minIteration = iterations;
+			}
+		}
 		
 		//update _eta, the learning rate
 	}
+
+	cout << "Minimum error: " << minError << " at iteration " << minIteration << endl;
 }
 
 /*

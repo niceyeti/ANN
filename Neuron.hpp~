@@ -17,6 +17,12 @@ applications, as well as for neural network components.
 
 */
 
+//The weights are broken out into a primitive object type to accomodate for momentum and other weight heuristics. (See Haykin "momentum")
+typedef struct Weight{
+	double w;
+	double dw;
+};
+
 
 enum ActivationFunction {TANH, LOGISTIC, LINEAR, SIGN};
 
@@ -26,7 +32,7 @@ class Neuron{
 		Neuron(int numInputs, ActivationFunction methodType);
 		~Neuron();
 		
-		vector<double> Weights;
+		vector<Weight> Weights;
 		vector<const double*> Inputs; //inputs are pointer-type, so that a single input may be demuxed to multiple neurons
 		ActivationFunction PhiFunction;
 		double Signal; // the weighted sum of inputs (the dot product w * x before being passed through the signal function, theta)
@@ -35,12 +41,12 @@ class Neuron{
 		void NullifyInputPtrs();
 		void Stimulate();
 		double CalculateSignal();
-		double ValidateSignal();
-		double ValidateOutput();
+		void ValidateSignal();
+		void ValidateOutput();
 		const char* FpClassify(double x);
 		double Phi();
 		double PhiPrime();
-		double InnerProduct(const vector<const double*>& inputs, const vector<double>& weights);
+		double InnerProduct(const vector<const double*>& inputs, const vector<Weight>& weights);
 		//All of the following functions can be found in the neural net literature.
 		double Sigmoid(double expt);
 		//Returns first derivative of the sigmoid function
