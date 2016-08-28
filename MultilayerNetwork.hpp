@@ -53,7 +53,7 @@ class MultilayerNetwork{
 		void ValidateOutputs();
 		const char* FpClassify(double x);
 		bool IsValidExample(const vector<double>& example);
-		void BuildNet(int numInputs, int numLayers, int numHiddenUnits, int numOutputUnits);
+		void BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
 		void Classify(const vector<double>& inputs);
 		void UpdateWeights(const vector<double>& inputs, double target);
 		void BackpropagateError(const vector<double>& inputs, double target);
@@ -61,7 +61,7 @@ class MultilayerNetwork{
 		void BatchTrain(const vector<vector<double> >& dataset);
 		void Test(const string& outputPath, vector<vector<double> >& testSet);
 		MultilayerNetwork();
-		MultilayerNetwork(int numInputs, int numLayers, int numHiddenUnits, int numOutputUnits);
+		MultilayerNetwork(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
 		~MultilayerNetwork();
 		void Clear();
 };

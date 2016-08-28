@@ -6,7 +6,7 @@ MultilayerNetwork::MultilayerNetwork()
 	_eta = 0;
 }
 
-MultilayerNetwork::MultilayerNetwork(int numInputs, int numLayers, int numHiddenUnits, int numOutputUnits)
+MultilayerNetwork::MultilayerNetwork(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits)
 {
 	_momentum = 0;
 	_eta = 0.1;
@@ -65,7 +65,7 @@ where the additional input is for the bias.
 @numHiddenUnits: Number of hidden units in the hidden layer
 @numOutputUnits: Nmber of output units
 */
-void MultilayerNetwork::BuildNet(int numInputs, int numLayers, int numHiddenUnits, int numOutputUnits)
+void MultilayerNetwork::BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits)
 {
 	int i, j, l;
 
@@ -126,12 +126,16 @@ void MultilayerNetwork::PrintWeights()
 {
 	int i, j, l;
 	
+	//print each layer
 	for(l =0; l < _layers.size(); l++){
+		//print each neuron in this layer
 		cout << "Layer " << l << " weights: " << endl;
 		for(i = 0; i < _layers[l].size(); i++){
+			//print each weight for this neuron
+			cout << "  neuron " << i << ": " << flush;
 			for(j = 0; j < _layers[l][i].Weights.size(); j++){
-				//cout << _layers[l][i].Weights[j] << " ";
-				printf("%f ",_layers[l][i].Weights[j].w);
+				//cout << _layers[l][i].Weights[j].w << " ";
+				printf("%03.3f ",_layers[l][i].Weights[j].w);
 			}
 			cout << endl;
 		}
