@@ -89,7 +89,6 @@ void MultilayerNetwork::BuildNet(int numLayers, int numInputs, int numHiddenUnit
 		_nullifyLayer(_layers[i]);
 	}
 
-	cout << "here1" << endl;
 	//set up the output units
 	_layers[_layers.size()-1].resize(numOutputUnits, Neuron(_layers[_layers.size()-2].size() + 1, TANH) ); //plus one for the biases
 	_nullifyLayer(_layers[_layers.size()-1]);
@@ -105,7 +104,7 @@ void MultilayerNetwork::BuildNet(int numLayers, int numInputs, int numHiddenUnit
 			}
 		}
 	}
-	cout << "here2" << endl;
+
 	//connect the bias inputs; the zeroeth input of every neuron will be a bias weight
 	_biases.resize(numLayers);
 	for(l = _layers.size()-1; l >= 0; l--){
@@ -115,7 +114,6 @@ void MultilayerNetwork::BuildNet(int numLayers, int numInputs, int numHiddenUnit
 		}
 	}
 
-	cout << "here3" << endl;
 	//initialize the biases to constant 1.0
 	for(i = 0; i < _biases.size(); i++){
 		_biases[i] = 1.0;
@@ -127,6 +125,12 @@ void MultilayerNetwork::InitializeWeights()
 {
 	//intialize the weights to random values
 	_assignRandomWeights();
+}
+
+bool MultilayerNetwork::Read(const string& path)
+{
+	cout << "Read() to be implemented" << endl;
+	return true;
 }
 
 /*
@@ -321,8 +325,9 @@ The gist:
 		Ad hoc for now. Can use maxIterations, error-reduction-threshold, or otherwise.
 		
 */
-void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset)
+void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset, double eta, double momentum)
 {
+	bool done = false;
 	string dummy;
 	int iterations, minIteration, ringIndex;
 	double convergence, input, netError, minError, prevNetError;
@@ -339,11 +344,11 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset)
 	netError = 1;
 	minError = 10000000;
 	convergence = 0;
-	_eta = 0.1;
-	_momentum = 0.0; //reportedly a good value (see Haykin)
+	_eta = eta;
+	_momentum = momentum; //reportedly a good value is 0.5 (see Haykin)
 
 	//while(netError > convergenceThreshold){
-	while(iterations < 500000){
+	while(iterations < 500000 && !done){
 		//PrintWeights();
 		
 		//randomly choose an example
@@ -374,10 +379,18 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset)
 				minIteration = iterations;
 			}
 		}
+
+		if(iterations % 1000 == 999){
+			PrintWeights();
+			cout << "Continue? Enter 1 to end training: " << flush;
+			cin >> dummy;
+			done = dummy[0] == '1';
+		}
 		
 		//update _eta, the learning rate
 	}
 
+	PrintWeights();
 	cout << "Minimum error: " << minError << " at iteration " << minIteration << endl;
 }
 
@@ -527,4 +540,59 @@ void MultilayerNetwork::Test(const string& outputPath, vector<vector<double> >& 
 	}
 	
 	outputFile.close();
+}
+
+
+//Given a line, tokenize it using delim, storing the tokens in output
+void MultilayerNetwork::_tokenize(const string &s, char delim, vector<string> &tokens)
+{
+    stringstream ss(s);
+    string temp;
+	
+	//clear any existing tokens
+	tokens.clear();
+	
+    while (getline(ss, temp, delim)) {
+        tokens.push_back(temp);
+    }
+}
+
+/*
+Reads in a csv file containing examples in the form <val1,val2...,val-n,class-label>
+Example format for 2d data: 2.334,5.276,-1
+The class lable is expected to be some kind of numeric, 1, -1, a probability, or even an integer-class (for multiclasses).
+This function doesn't need to know any of that.
+
+Returns: nothing, stores output in vector<double>.
+*/
+void MultilayerNetwork::ReadCsvDataset(const string& path, vector<vector<double> >& output)
+{
+	int i;
+	fstream dataFile;
+	string line;
+	vector<string> tokens;
+	vector<double> temp;
+
+	dataFile.open(path.c_str(),ios::in);
+	if(!dataFile.is_open()){
+		cout << "ERROR could not open dataset file: " << path << endl;
+	}
+
+	cout << "Building dataset..." << endl;
+	//clear any existing data
+	output.clear();
+	
+	while(getline(dataFile, line)){
+		tokens.clear();
+		_tokenize(line,',',tokens);
+		
+		//build a temp double vector containing the vals from the record, in double form
+		temp.clear();
+		for(i = 0; i < tokens.size(); i++){
+			temp.push_back(std::stod(tokens[i]));
+		}
+		
+		output.push_back(temp);
+	}
+	cout << "Dataset build complete. Read " << output.size() << " examples." << endl;
 }

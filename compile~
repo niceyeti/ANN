@@ -1,2 +1,2 @@
 #!/bin/bash
-g++ Neuron.cpp Multilayer.cpp Util.cpp main.cpp -o testANN -std=c++11
+g++ Neuron.cpp MultilayerNetwork.cpp Util.cpp main.cpp -o testANN -std=c++11

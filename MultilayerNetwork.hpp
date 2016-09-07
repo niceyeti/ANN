@@ -7,7 +7,8 @@
 #include <string>
 #include <cmath>
 #include <cfloat>
-
+#include <sstream>
+#include <fstream>
 
 using namespace std;
 
@@ -40,7 +41,10 @@ class MultilayerNetwork{
 		//eta performs best with some decaying value updates
 		void _nullifyLayer(vector<Neuron>& layer);
 		void _assignRandomWeights();
+		void _tokenize(const string &s, char delim, vector<string> &tokens);
 	public:
+		void ReadCsvDataset(const string& path, vector<vector<double> >& output);
+		bool Read(const string& path);
 		void SetMomentum(double momentum);
 		bool IsOutputNormal();
 		void SetHiddenLayerFunction(ActivationFunction functionType, int layer=0);
@@ -58,7 +62,7 @@ class MultilayerNetwork{
 		void UpdateWeights(const vector<double>& inputs, double target);
 		void BackpropagateError(const vector<double>& inputs, double target);
 		void Backpropagate(const vector<double>& example);
-		void BatchTrain(const vector<vector<double> >& dataset);
+		void BatchTrain(const vector<vector<double> >& dataset, double eta, double momentum);
 		void Test(const string& outputPath, vector<vector<double> >& testSet);
 		MultilayerNetwork();
 		MultilayerNetwork(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
