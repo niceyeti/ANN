@@ -18,7 +18,7 @@ applications, as well as for neural network components.
 */
 
 //The weights are broken out into a primitive object type to accomodate for momentum and other weight heuristics. (See Haykin "momentum")
-typedef struct Weight{
+struct Weight{
 	double w;
 	double dw;
 };
@@ -32,6 +32,7 @@ class Neuron{
 		Neuron(int numInputs, ActivationFunction methodType);
 		~Neuron();
 		
+		static string GetActivationFunctionString(ActivationFunction function);
 		vector<Weight> Weights;
 		vector<const double*> Inputs; //inputs are pointer-type, so that a single input may be demuxed to multiple neurons
 		ActivationFunction PhiFunction;

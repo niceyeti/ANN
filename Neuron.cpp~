@@ -205,7 +205,53 @@ double Neuron::PhiPrime()
 			break;
 	}
 
-	return result;	
+	return result;
+}
+
+ActivationFunction Neuron::GetActivationFunction(const string& function)
+{
+	ActivationFunction af = LOGISTIC;
+
+	if(function == "TANH"){
+		af = TANH;
+	}
+	else if(function == "LOGISTIC"){
+		af = LOGISTIC;
+	}
+	else if(function == "LINEAR"){
+		af = LINEAR;
+	}
+	else if(function == "SIGN"){
+		af = SIGN;
+	}
+	else{
+		cout << "Activation function unknown: " << function << "  returning LOGISTIC" << endl;
+	}
+}
+
+string Neuron::GetActivationFunctionString(ActivationFunction function)
+{
+	string funcStr;
+
+	switch(function){
+		case TANH:
+			funcStr = "TANH";
+		break;
+		case LOGISTIC:
+			funcStr = "LOGISTIC";
+		break;
+		case LINEAR:
+			funcStr = "LINEAR";
+		break;
+		case SIGN:
+			funcStr = "SIGN";
+		break;
+		default:
+			funcStr = "UNKNOWN";
+		break;
+	}
+
+	return funcStr;
 }
 
 double Neuron::InnerProduct(const vector<const double*>& inputs, const vector<Weight>& weights)

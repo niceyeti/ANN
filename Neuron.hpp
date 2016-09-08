@@ -32,6 +32,8 @@ class Neuron{
 		Neuron(int numInputs, ActivationFunction methodType);
 		~Neuron();
 		
+		static ActivationFunction GetActivationFunction(const string& function);
+		static string GetActivationFunctionString(ActivationFunction function);
 		vector<Weight> Weights;
 		vector<const double*> Inputs; //inputs are pointer-type, so that a single input may be demuxed to multiple neurons
 		ActivationFunction PhiFunction;

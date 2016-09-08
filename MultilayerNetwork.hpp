@@ -40,11 +40,14 @@ class MultilayerNetwork{
 		vector<vector<Neuron> > _layers;
 		//eta performs best with some decaying value updates
 		void _nullifyLayer(vector<Neuron>& layer);
-		void _assignRandomWeights();
 		void _tokenize(const string &s, char delim, vector<string> &tokens);
+		void _parseCsvFloats(string& input, vector<double> vals);
+		double _getParamVal(const string& param);
 	public:
+		void ReadNetwork(const string& path);
+		void SaveNetwork(const string& path);
+		void AssignRandomWeights();
 		void ReadCsvDataset(const string& path, vector<vector<double> >& output);
-		bool Read(const string& path);
 		void SetMomentum(double momentum);
 		bool IsOutputNormal();
 		void SetHiddenLayerFunction(ActivationFunction functionType, int layer=0);
@@ -53,6 +56,8 @@ class MultilayerNetwork{
 		void InitializeWeights();
 		const vector<Neuron>& GetOutputs(); //client gets the output by reading the output layer neurons' outputs
 		void PrintWeights();
+		void ReadWeights(const string& path);
+		void SaveWeights(const string& path);
 		double GetNetError();
 		void ValidateOutputs();
 		const char* FpClassify(double x);

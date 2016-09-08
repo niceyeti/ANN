@@ -124,13 +124,7 @@ void MultilayerNetwork::BuildNet(int numLayers, int numInputs, int numHiddenUnit
 void MultilayerNetwork::InitializeWeights()
 {
 	//intialize the weights to random values
-	_assignRandomWeights();
-}
-
-bool MultilayerNetwork::Read(const string& path)
-{
-	cout << "Read() to be implemented" << endl;
-	return true;
+	AssignRandomWeights();
 }
 
 /*
@@ -156,11 +150,161 @@ void MultilayerNetwork::PrintWeights()
 	}
 }
 
+/*
+When written to file, the network weights will be written out in layers, formatted as:
+	numLayers=2
+	numInputs=3
+	hiddenUnitsPerLayer=8
+	numOutputUnits=1
+	hiddenLayerFunction=TANH
+	outputFunction=LINEAR
+	LAYER_1_WEIGHTS
+	1 2 3
+	2 3 1
+	...
+	LAYER_2_WEIGHTS
+	3 4 5
+	1 0 4
+	...
+
+TODO: A neural network is really just a graph. It might be easier to use graph serialization libs
+or standards, eg graphml.
+*/
+void MultilayerNetwork::SaveNetwork(const string& path)
+{
+	int i, j, l;
+	ofstream fileStream;
+
+	fileStream.open(path);
+	
+	//write global structural info
+	fileStream << "numLayers=" << (int)_layers.size() << endl;
+	fileStream << "numInputs=" << (int)_layers[0].Inputs.size() << endl;
+	fileStream << "hiddenUnitsPerLayer=" << _layers[0].size();
+	fileStream << "numOutputUnits=" << _layers[_layers.size()-1].size() << endl;
+	fileStream << "hiddenLayerFunction=" << Neuron::GetActivationFunctionString(_layers[0][0].PhiFunction) << endl;
+	fileStream << "outputFunction=" << Neuron::GetActivationFunctionString(_layers[_layers.size()-1][0].PhiFunction) << endl;
+
+	//iterate the layers
+	for(l = 0; l < _layers.size(); l++){
+		//iterate each neuron in this layer
+		fileStream << l << "_LAYER_WEIGHTS" << endl;
+		for(i = 0; i < _layers[l].size(); i++){
+			//output this neuron's weights
+			for(j = 0; j < _layers[l][i].Weights.size(); j++){
+				fileStream << _layers[l][i].Weights[j].w;
+				if(j < _layers[l][i].Weights.size() - 1)
+					fileStream << ",";
+				else
+					fileStream << endl;
+			}
+		}
+	}
+
+	fileStream.close();
+}
+
+/*
+Given a string of the form "numLayers=5", returns 5 as a double. This func doesn't
+care about the param string value.
+*/
+double MultilayerNetwork::_getParamVal(const string& param)
+{
+	double val;
+
+	cout << "Param: " << param << endl;
+	val = stod(param.substr(param.find('=')+1, param.length() - (param.find('=')+1)));
+	cout << "Val=" << val;
+
+	return val;
+}
+
+/*
+Given some file of saved weights formatted as by SaveWeights(), this
+deserializes them back into the network. Note this does not set eta, momentum,
+etc., which is the client's responsibility.
+
+This function is suicidal. If the input format is wrong, unordered, or values are invalid, die and go to heaven.
+*/
+void MultilayerNetwork::ReadNetwork(const string& path)
+{
+	ifstream ifile(path, ios::in);
+	string input, param;
+	int i, j, l;
+	int numLayers, numHiddenUnits, numOutputUnits, numInputs, hiddenLayerFunction, outputFunction;
+	vector<double> temp;
+
+	//parse numLayers param
+	ifile >> input;
+	numLayers = _getParamVal(input);
+	//parse the numInputs
+	ifile >> input;
+	numInputs = _getParamVal(input);
+	//parse the numHiddenUnitsPerLayer
+	ifile >> input;
+	numHiddenUnits = _getParamVal(input);
+	//parse the numOutputs
+	ifile >> input;
+	numOutputUnits = _getParamVal(input);
+	//parse the hiddenLayerFunction
+	ifile >> input;
+	hiddenLayerFunction = (int)Neuron.GetActivationFunction(param.substr(param.find('=')+1, param.length() - (param.find('=')+1)));
+	//parse the outputLayerFunction
+	ifile >> input;
+	outputFunction = (int)Neuron.GetActivationFunction(param.substr(param.find('=')+1, param.length() - (param.find('=')+1)));
+
+	//build the network
+	BuildNet(numLayers, numInputs, numHiddenUnits, numOutputUnits);
+	SetHiddenLayerFunction((ActivationFunction)hiddenLayerFunction);
+	SetOutputLayerFunction((ActivationFunction)outputFunction);
+	
+	temp.resize( max(max(numOutputUnits,numHiddenUnits),numInputs) + 1); //plus one for a bias, if any
+
+	//initialize the network weights; clearly this directly depends on the number of layers being initialized correctly
+	for(l = 0; l < _layers.size(); l++){
+		for(i = 0; i < _layers[l].size(); i++){
+			ifile >> input;
+			//skip, if this is the header line
+			if(input.find("LAYER_WEIGHTS") != string::npos){
+				ifile >> input;
+			}
+
+			_parseCsvFloats(input,temp);
+			if(temp.size() < _layers[l][i].Weights.size()){
+				cout << "ERROR dim-temp=" << temp.size() << " < dim-weights=" << _layers[l][i].Weights.size() << endl;
+			}
+
+			for(j = 0; j < _layers[l][i].Weights.size(); j++){
+				_layers[l][i].Weights[j].w = temp[j];
+				_layers[l][i].Weights[j].dw = 0;
+			}
+		}
+	}
+
+	ifile.close();
+}
+
+void MultilayerNetwork::_parseCsvFloats(string& input, vector<double> vals)
+{
+	vector<string> temp;
+
+	_tokenize(input,',',temp);
+
+	if(vals.size() < temp.size()){
+		//in the context of reading in a neural net, i just want to see this warning
+		cout << "WARN passed double vector < dimension of csv row; check code" << endl;
+		vals.resize(temp.size());
+	}
+
+	for(int i = 0; i < temp.size(); i++){
+		vals[i] = stod(temp[i]);
+	}
+}
 
 /*
 There are specific strategies for initializing the weights (see Haykin). Here they are just init'ed with random numbers.
 */
-void MultilayerNetwork::_assignRandomWeights()
+void MultilayerNetwork::AssignRandomWeights()
 {
 	int i, j, l;
 	
@@ -330,42 +474,42 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset, doubl
 	bool done = false;
 	string dummy;
 	int iterations, minIteration, ringIndex;
-	double convergence, input, netError, minError, prevNetError;
+	double convergence, input, netError, minError;
 	vector<double> errorHistory;
 	
 	//initialize the weights to random values
 	InitializeWeights();
 	
 	//sliding error-window for viewing long term error changes
-	errorHistory.resize(50, 0.0);
+	errorHistory.resize(1000, 0.0);
 	ringIndex = 0;
 	
 	iterations = 0;
 	netError = 1;
 	minError = 10000000;
 	convergence = 0;
-	_eta = eta;
-	_momentum = momentum; //reportedly a good value is 0.5 (see Haykin)
+	SetEta(eta);
+	SetMomentum(momentum); //reportedly a good value is 0.5 (see Haykin)
 
 	//while(netError > convergenceThreshold){
 	while(iterations < 500000 && !done){
 		//PrintWeights();
 		
 		//randomly choose an example
-		const vector<double>& example = dataset[ rand() % dataset.size() ];
+		const vector<double>& example = dataset[ iterations % dataset.size() ];
 		//learns from a single example: drives the network outputs, backprops, and updates the weights
 		Backpropagate(example);
 		
 		//track error info
-		prevNetError = netError;
 		netError = GetNetError();
 		//save this error level
 		errorHistory[ringIndex] = abs(netError);
 		ringIndex = (ringIndex + 1) % (int)errorHistory.size();
 		
 		iterations++;
-		if(iterations % 50 == 49){
-			//average the error of the last 50 examples learned
+
+		if(iterations % 1000 == 999){
+			//average the error of the last k examples learned
 			double avgError = 0.0;
 			for(int i = 0; i < errorHistory.size(); i++){
 				avgError += errorHistory[i];
@@ -378,13 +522,13 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset, doubl
 				minError = avgError;
 				minIteration = iterations;
 			}
-		}
 
-		if(iterations % 1000 == 999){
+			/*
 			PrintWeights();
 			cout << "Continue? Enter 1 to end training: " << flush;
 			cin >> dummy;
 			done = dummy[0] == '1';
+			*/
 		}
 		
 		//update _eta, the learning rate
@@ -413,9 +557,10 @@ void MultilayerNetwork::Backpropagate(const vector<double>& example)
 bool MultilayerNetwork::IsValidExample(const vector<double>& example)
 {
 	for(int i = 0; i < example.size(); i++){
-		if(!std::isnormal(example[i])){
-			cout << "WARNING In MultilayerNetwork, isnormal() returned for input example value example[" << i << "] of " << example.size() << " length vector" << endl;
-			cout << example[i] << endl;
+		if(!std::isnormal(example[i]) && example[i] != 0){
+			cout << "WARNING In MultilayerNetwork, isnormal() returned true for input example value example[" << i << "] of " << example.size() << " length vector" << endl;
+			cout << "Example will not be backpropagated" << endl;
+			cout << "Value: " << example[i] << endl;
 			cout << FpClassify(example[i]) << endl;
 			return false;
 		}
