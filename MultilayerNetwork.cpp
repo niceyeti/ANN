@@ -494,8 +494,9 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset, doubl
 	SetMomentum(momentum); //reportedly a good value is 0.5 (see Haykin)
 
 	//while(netError > convergenceThreshold){
-	while(iterations < 500000 && !done){
+	while(iterations < 50000 && !done){
 
+		/*
 		//serial/deserialization testing
 		if(iterations == 1000){
 			string path = "network.txt";
@@ -506,6 +507,7 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset, doubl
 			SaveNetwork("network2.txt");
 			cin >> path;
 		}
+		*/
 		
 		
 		//randomly choose an example
@@ -543,8 +545,6 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset, doubl
 			done = dummy[0] == '1';
 			*/
 		}
-		
-		//update _eta, the learning rate
 	}
 
 	PrintWeights();
