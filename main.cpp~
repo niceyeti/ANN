@@ -5,12 +5,11 @@ void usage()
 	cout << "Usage: ./testAnn [path to dataset] [function: LOGISTIC, TANH, or LINEAR]" << endl;
 }
 
-
 int main(int argc, char** argv)
 {
 	ActivationFunction output;
 	string path, function;
-	MultilayerNetwork nn(4, 3, 25, 1);
+	MultilayerNetwork nn(2, 3, 25, 1);
 	vector<vector<double> > dataset;
 	
 	if(argc < 3){

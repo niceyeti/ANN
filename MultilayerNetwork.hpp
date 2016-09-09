@@ -41,9 +41,10 @@ class MultilayerNetwork{
 		//eta performs best with some decaying value updates
 		void _nullifyLayer(vector<Neuron>& layer);
 		void _tokenize(const string &s, char delim, vector<string> &tokens);
-		void _parseCsvFloats(string& input, vector<double> vals);
+		void _parseCsvFloats(string& input, vector<double>& vals);
 		double _getParamVal(const string& param);
 	public:
+		string Name;
 		void ReadNetwork(const string& path);
 		void SaveNetwork(const string& path);
 		void AssignRandomWeights();

@@ -5,7 +5,6 @@ void usage()
 	cout << "Usage: ./testAnn [path to dataset] [function: LOGISTIC, TANH, or LINEAR]" << endl;
 }
 
-
 int main(int argc, char** argv)
 {
 	ActivationFunction output;

@@ -11,7 +11,7 @@ MultilayerNetwork::MultilayerNetwork(int numLayers, int numInputs, int numHidden
 	_momentum = 0;
 	_eta = 0.1;
 
-	BuildNet(numInputs, numLayers, numHiddenUnits, numOutputUnits);
+	BuildNet(numLayers, numInputs, numHiddenUnits, numOutputUnits);
 }
 
 MultilayerNetwork::~MultilayerNetwork()
@@ -178,9 +178,9 @@ void MultilayerNetwork::SaveNetwork(const string& path)
 	fileStream.open(path);
 	
 	//write global structural info
-	fileStream << "numLayers=" << (int)_layers.size() << endl;
-	fileStream << "numInputs=" << (int)_layers[0].Inputs.size() << endl;
-	fileStream << "hiddenUnitsPerLayer=" << _layers[0].size();
+	fileStream << "numLayers=" << _layers.size() << endl;
+	fileStream << "numInputs=" << (_layers[0][0].Inputs.size() - 1) << endl; // minus one for the bias
+	fileStream << "hiddenUnitsPerLayer=" << _layers[0].size() << endl;
 	fileStream << "numOutputUnits=" << _layers[_layers.size()-1].size() << endl;
 	fileStream << "hiddenLayerFunction=" << Neuron::GetActivationFunctionString(_layers[0][0].PhiFunction) << endl;
 	fileStream << "outputFunction=" << Neuron::GetActivationFunctionString(_layers[_layers.size()-1][0].PhiFunction) << endl;
@@ -214,7 +214,7 @@ double MultilayerNetwork::_getParamVal(const string& param)
 
 	cout << "Param: " << param << endl;
 	val = stod(param.substr(param.find('=')+1, param.length() - (param.find('=')+1)));
-	cout << "Val=" << val;
+	cout << "Val=" << val << endl;
 
 	return val;
 }
@@ -228,11 +228,12 @@ This function is suicidal. If the input format is wrong, unordered, or values ar
 */
 void MultilayerNetwork::ReadNetwork(const string& path)
 {
-	ifstream ifile(path, ios::in);
-	string input, param;
 	int i, j, l;
-	int numLayers, numHiddenUnits, numOutputUnits, numInputs, hiddenLayerFunction, outputFunction;
+	int numLayers, numHiddenUnits, numOutputUnits, numInputs;
+	ActivationFunction hiddenLayerFunction, outputFunction;
 	vector<double> temp;
+	string input, param;
+	ifstream ifile(path, ios::in);
 
 	//parse numLayers param
 	ifile >> input;
@@ -248,23 +249,24 @@ void MultilayerNetwork::ReadNetwork(const string& path)
 	numOutputUnits = _getParamVal(input);
 	//parse the hiddenLayerFunction
 	ifile >> input;
-	hiddenLayerFunction = (int)Neuron.GetActivationFunction(param.substr(param.find('=')+1, param.length() - (param.find('=')+1)));
+	hiddenLayerFunction = Neuron::GetActivationFunction(input.substr(input.find('=')+1, input.length() - (input.find('=')+1)));
 	//parse the outputLayerFunction
 	ifile >> input;
-	outputFunction = (int)Neuron.GetActivationFunction(param.substr(param.find('=')+1, param.length() - (param.find('=')+1)));
+	outputFunction = Neuron::GetActivationFunction(input.substr(input.find('=')+1, input.length() - (input.find('=')+1)));
 
 	//build the network
+	Clear();
 	BuildNet(numLayers, numInputs, numHiddenUnits, numOutputUnits);
-	SetHiddenLayerFunction((ActivationFunction)hiddenLayerFunction);
-	SetOutputLayerFunction((ActivationFunction)outputFunction);
-	
+	SetHiddenLayerFunction(hiddenLayerFunction);
+	SetOutputLayerFunction(outputFunction);
+
 	temp.resize( max(max(numOutputUnits,numHiddenUnits),numInputs) + 1); //plus one for a bias, if any
 
 	//initialize the network weights; clearly this directly depends on the number of layers being initialized correctly
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
 			ifile >> input;
-			//skip, if this is the header line
+			//skip line, if this is the header line
 			if(input.find("LAYER_WEIGHTS") != string::npos){
 				ifile >> input;
 			}
@@ -284,7 +286,7 @@ void MultilayerNetwork::ReadNetwork(const string& path)
 	ifile.close();
 }
 
-void MultilayerNetwork::_parseCsvFloats(string& input, vector<double> vals)
+void MultilayerNetwork::_parseCsvFloats(string& input, vector<double>& vals)
 {
 	vector<string> temp;
 
@@ -493,7 +495,18 @@ void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset, doubl
 
 	//while(netError > convergenceThreshold){
 	while(iterations < 500000 && !done){
-		//PrintWeights();
+
+		//serial/deserialization testing
+		if(iterations == 1000){
+			string path = "network.txt";
+			cout << "Writing network to " << path << endl;
+			SaveNetwork(path);
+			Clear();
+			ReadNetwork(path);
+			SaveNetwork("network2.txt");
+			cin >> path;
+		}
+		
 		
 		//randomly choose an example
 		const vector<double>& example = dataset[ iterations % dataset.size() ];
