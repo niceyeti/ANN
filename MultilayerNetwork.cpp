@@ -4,12 +4,15 @@ MultilayerNetwork::MultilayerNetwork()
 {
 	_momentum = 0;
 	_eta = 0;
+	_useRegularizer = false;
 }
 
 MultilayerNetwork::MultilayerNetwork(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits)
 {
 	_momentum = 0;
 	_eta = 0.1;
+	_useRegularizer = false;
+	_lambda = 0;
 
 	BuildNet(numLayers, numInputs, numHiddenUnits, numOutputUnits);
 }
@@ -359,6 +362,36 @@ bool MultilayerNetwork::IsOutputNormal()
 }
 
 /*
+Gets the regularization value via the regularizer set by the user:
+	L1: The sum of absolute values of all weights
+	L2: 1/2 the sum of values of all  weights in the network, preferring non-peaky w vectors
+*/
+double MultilayerNetwork::_getRegularizerValue()
+{
+	double r = 0.0;
+
+	for(int l = 0; l < _layers.size(); l++){
+		for(int i = 0; i < _layers[l].size(); i++){
+			for(int j = 0; j < _layers[l][i].Weights.size(); j++){
+				//l2 regularizer
+				r += (_layers[l][i].Weights[j].w * _layers[l][i].Weights[j].w);
+				//l1 regularizer
+				//r += _layers[l][i].Weights[j].w;
+			}
+		}
+	}
+
+	return 0.5 * r;	
+}
+
+//@newLambda: some value in range 0.0-1.0
+void MultilayerNetwork::SetRegularizerLambda(double newLambda)
+{
+	_useRegularizer = true;
+	_lambda = newLambda;
+}
+
+/*
 Given that Classify() has been called for an example, this backpropagates the error given
 by that single example. Hence this function is stateful, in that it assumes the network
 outputs have been driven by a specific example. The reason this is public is for clients
@@ -367,7 +400,7 @@ that do online learning, like in approximate Q-learning.
 void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, double target)
 {
 	int i, j, l;
-	double sum;
+	double sum, reg = 0.0;
 
 	//prevent nans, inf, etc from being backpropagated
 	if(!std::isnormal(target) || !IsOutputNormal()){
@@ -375,11 +408,15 @@ void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, double 
 		return;
 	}
 
+	if(_useRegularizer){
+		reg = _lambda * _getRegularizerValue();
+	}
+
 	//calculate the final-layer deltas, which are just the signal-prime values
 	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
 	for(i = 0; i < finalLayer.size(); i++){
 		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
-		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (target - finalLayer[i].Output);
+		finalLayer[i].Delta = finalLayer[i].PhiPrime() * ((target - finalLayer[i].Output) + reg);
 	}
 
 	//backpropagate the deltas through the layers
