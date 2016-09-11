@@ -317,10 +317,9 @@ void MultilayerNetwork::AssignRandomWeights()
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
 			for(j = 0; j < _layers[l][i].Weights.size(); j++){
-				_layers[l][i].Weights[j].w = ((double)(rand() % 100)) / 50.0;
-				if(rand() % 2 == 0){
-					_layers[l][i].Weights[j].w *= -1.0; //flip the sign 50% of the time
-				}
+				//inits random weights in range [-1.0,1.0]
+				_layers[l][i].Weights[j].w = (((double)(rand() % 200)) / 100.0) - 1.0;
+				_layers[l][i].Weights[j].dw = 0.0;
 			}
 		}
 	}
