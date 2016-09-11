@@ -2,42 +2,44 @@
 
 void usage()
 {
-	cout << "Usage: ./testAnn [path to dataset] [function: LOGISTIC, TANH, or LINEAR]" << endl;
+	cout << "Usage: ./batch [path to dataset] [#layers] [output function] [hidden function] [#numInputs] [#hidden units] [#outputs] [eta] [momentum]" << endl;
+	cout << "For 'function' parameters, valid values are: LOGISTIC, TANH, or LINEAR" << endl;
 }
 
 int main(int argc, char** argv)
 {
-	ActivationFunction output;
-	string path, function;
-	MultilayerNetwork nn(2, 3, 25, 1);
+	int numLayers, numHiddenUnits, numInputs, numOutputs;
+	double momentum, eta;
+	ActivationFunction outputFunc, hiddenFunc;
+	string path, outputFunction, hiddenFunction;
 	vector<vector<double> > dataset;
 	
-	if(argc < 3){
-		cout << "Incorrect num parameters" << endl;
+	if(argc < 10){
+		cout << "Incorrect num parameters: " << argc << endl;
 		usage();
-		return 1;
+		return 0;
 	}
 
+	cout << "argc=" << argc << endl;
 	path = argv[1];
-	function = argv[2];
+	numLayers = stoi(argv[2]);
+	outputFunction = argv[3];
+	hiddenFunction = argv[4];
+	numInputs = stoi(argv[5]);
+	numHiddenUnits = stoi(argv[6]);
+	numOutputs = stoi(argv[7]);
+	eta = stod(string(argv[8]));
+	momentum = stod(string(argv[9]));
 
-	if(function == "TANH"){
-		output = TANH;
-	}
-	else if(function == "LINEAR"){
-		output = LINEAR;
-	}
-	else if(function == "LOGISTIC"){
-		output = LOGISTIC;
-	}
-	else{
-		cout << "Function not found: " << function << endl;
-		usage();
-		return 1;
-	}
+	outputFunc = Neuron::GetActivationFunction(outputFunction);
+	hiddenFunc = Neuron::GetActivationFunction(hiddenFunction);
 
-
-	nn.SetOutputLayerFunction(output);
+	//build the network from the cmd line parameters
+	MultilayerNetwork nn(numLayers, numInputs, numHiddenUnits, numOutputs);
+	//set up the network output and hidden layer functions
+	nn.SetOutputLayerFunction(outputFunc);
+	nn.SetHiddenLayerFunction(hiddenFunc);
+	//read the dataset
 	nn.ReadCsvDataset(path, dataset);
 
 	//for(int i = 0; i < dataset.size(); i++){
@@ -46,13 +48,16 @@ int main(int argc, char** argv)
 	//	}
 	//	cout << endl;
 	//}
-	nn.BatchTrain(dataset,0.05,0.5);
+	nn.BatchTrain(dataset, eta, momentum);
 
+	/*
 	dataset.clear();
 	path = "./Data/test2d.csv";
 	nn.ReadCsvDataset(path, dataset);
 	path = "./Data/predictions2d.csv";
 	nn.Test(path, dataset);
-	
+	*/	
+
+
 	return 0;
 }
