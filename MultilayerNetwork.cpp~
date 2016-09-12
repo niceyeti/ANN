@@ -318,7 +318,7 @@ void MultilayerNetwork::AssignRandomWeights()
 		for(i = 0; i < _layers[l].size(); i++){
 			for(j = 0; j < _layers[l][i].Weights.size(); j++){
 				//inits random weights in range [-1.0,1.0]
-				_layers[l][i].Weights[j].w = (((double)(rand() % 200)) / 100.0) - 1.0;
+				_layers[l][i].Weights[j].w = (((double)(rand() % 400)) / 100.0) - 1.0;
 				_layers[l][i].Weights[j].dw = 0.0;
 			}
 		}
