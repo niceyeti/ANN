@@ -36,8 +36,8 @@ class MultilayerNetwork{
 	private:
 		bool _useRegularizer;
 		double _eta;
+		double _weightDecayRate; //l2 regularizer
 		double _momentum;
-		double _lambda; //for regularization
 		vector<double> _biases;
 		vector<vector<Neuron> > _layers;
 		//eta performs best with some decaying value updates
@@ -45,10 +45,9 @@ class MultilayerNetwork{
 		void _tokenize(const string &s, char delim, vector<string> &tokens);
 		void _parseCsvFloats(string& input, vector<double>& vals);
 		double _getParamVal(const string& param);
-		double _getRegularizerValue();
 	public:
 		string Name;
-		void SetRegularizerLambda(double newLambda);
+		void SetWeightDecay(double decayRate);
 		void ReadNetwork(const string& path);
 		void SaveNetwork(const string& path);
 		void AssignRandomWeights();

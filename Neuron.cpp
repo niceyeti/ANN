@@ -69,6 +69,14 @@ void Neuron::NullifyInputPtrs()
 //All of the following functions can be found in the neural net literature.
 double Neuron::Sigmoid(double expt)
 {
+	//these are accurate to many decimals, and abort huge exponentiations
+	if(expt >= 20){
+		return 0.0;
+	}
+	if(expt <= -20){
+		return 1.0;
+	}
+
 	return 1.0 / (1.0 + exp(-expt));
 }
 
@@ -111,6 +119,14 @@ of popular activations and their derivatives.
 */
 double Neuron::Tanh(double expt)
 {
+	//these are correct to 20 or so decimals
+	if (expt <= -20.0){
+		return -1.0;
+	}
+	if (expt >= 20.0){
+		return 1.0;
+	}
+
 	return (2.0 / (1.0 + exp(-2.0*expt))) - 1.0;
 }
 

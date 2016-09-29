@@ -4,6 +4,7 @@ MultilayerNetwork::MultilayerNetwork()
 {
 	_momentum = 0;
 	_eta = 0;
+	_weightDecayRate = 0;
 	_useRegularizer = false;
 }
 
@@ -11,8 +12,7 @@ MultilayerNetwork::MultilayerNetwork(int numLayers, int numInputs, int numHidden
 {
 	_momentum = 0;
 	_eta = 0.1;
-	_useRegularizer = false;
-	_lambda = 0;
+	_weightDecayRate = 0;
 
 	BuildNet(numLayers, numInputs, numHiddenUnits, numOutputUnits);
 }
@@ -20,6 +20,21 @@ MultilayerNetwork::MultilayerNetwork(int numLayers, int numInputs, int numHidden
 MultilayerNetwork::~MultilayerNetwork()
 {
 	_layers.clear();
+}
+
+/*
+A simple L2 regularization method in nn's is to reduce the weight update value at each step.
+
+The update equation (ignoring all of the math) becomes:
+	w = w + d_w - lambda * w
+*/
+void MultilayerNetwork::SetWeightDecay(double decayRate)
+{
+	if(decayRate < 0 || decayRate > 1.0){
+		cout << "ERROR setting weight decay parameter to out of range value, chaos ensues: " << decayRate;
+	}
+
+	_weightDecayRate = decayRate;
 }
 
 void MultilayerNetwork::SetHiddenLayerFunction(ActivationFunction activationType, int layer)
@@ -361,36 +376,6 @@ bool MultilayerNetwork::IsOutputNormal()
 }
 
 /*
-Gets the regularization value via the regularizer set by the user:
-	L1: The sum of absolute values of all weights
-	L2: 1/2 the sum of values of all  weights in the network, preferring non-peaky w vectors
-*/
-double MultilayerNetwork::_getRegularizerValue()
-{
-	double r = 0.0;
-
-	for(int l = 0; l < _layers.size(); l++){
-		for(int i = 0; i < _layers[l].size(); i++){
-			for(int j = 0; j < _layers[l][i].Weights.size(); j++){
-				//l2 regularizer
-				r += (_layers[l][i].Weights[j].w * _layers[l][i].Weights[j].w);
-				//l1 regularizer
-				//r += _layers[l][i].Weights[j].w;
-			}
-		}
-	}
-
-	return 0.5 * r;	
-}
-
-//@newLambda: some value in range 0.0-1.0
-void MultilayerNetwork::SetRegularizerLambda(double newLambda)
-{
-	_useRegularizer = true;
-	_lambda = newLambda;
-}
-
-/*
 Given that Classify() has been called for an example, this backpropagates the error given
 by that single example. Hence this function is stateful, in that it assumes the network
 outputs have been driven by a specific example. The reason this is public is for clients
@@ -399,7 +384,7 @@ that do online learning, like in approximate Q-learning.
 void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, double target)
 {
 	int i, j, l;
-	double sum, reg = 0.0;
+	double sum;
 
 	//prevent nans, inf, etc from being backpropagated
 	if(!std::isnormal(target) || !IsOutputNormal()){
@@ -407,15 +392,11 @@ void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, double 
 		return;
 	}
 
-	if(_useRegularizer){
-		reg = _lambda * _getRegularizerValue();
-	}
-
 	//calculate the final-layer deltas, which are just the signal-prime values
 	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
 	for(i = 0; i < finalLayer.size(); i++){
 		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
-		finalLayer[i].Delta = finalLayer[i].PhiPrime() * ((target - finalLayer[i].Output) + reg);
+		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (target - finalLayer[i].Output);
 	}
 
 	//backpropagate the deltas through the layers
@@ -439,7 +420,7 @@ is meant as a convenience for online learners, like in Q-learning.
 */
 void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, double target)
 {
-	double dw, input;
+	double dw, reg, input;
 
 	if(!IsOutputNormal()){
 		cout << "ERROR one or more outputs abnormal, ABORTING UPDATEWEIGHTS()" << endl;
@@ -466,7 +447,8 @@ void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, double targe
 					}
 					dw = _eta * _layers[l][i].Delta * input;
 				}
-				//weight update
+
+				//the weight update
 				//printf("%f\n",_layers[l][i].Weights[j]);
 				//cout << "layer " << l << " update " << i << "," << j << "  : " << dW << endl;
 				if(_momentum == 0){ //no momentum, so ignore previous dw
@@ -476,6 +458,13 @@ void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, double targe
 					//see Haykin, Neural Nets. For momentum, the previous dw is used to add momentum to the weight update.
 					_layers[l][i].Weights[j].w = _momentum * _layers[l][i].Weights[j].dw + dw + _layers[l][i].Weights[j].w;
 					_layers[l][i].Weights[j].dw = dw;
+					//subtract the regularization term (0.0 if unused)
+					_layers[l][i].Weights[j].w -= reg;
+				}
+
+				//subtract the regularization term (0.0 if unused) after all updates are done
+				if(_weightDecayRate != 0.0){
+					_layers[l][i].Weights[j].w -= (_weightDecayRate * _layers[l][i].Weights[j].w);
 				}
 				//printf("%f\n",_layers[l][i].Weights[j]);
 			}
