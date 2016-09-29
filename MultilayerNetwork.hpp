@@ -60,6 +60,7 @@ class MultilayerNetwork{
 		void InitializeWeights();
 		const vector<Neuron>& GetOutputs(); //client gets the output by reading the output layer neurons' outputs
 		void PrintWeights();
+		void ResetWeights();
 		void ReadWeights(const string& path);
 		void SaveWeights(const string& path);
 		double GetNetError();

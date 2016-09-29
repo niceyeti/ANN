@@ -238,6 +238,18 @@ double MultilayerNetwork::_getParamVal(const string& param)
 }
 
 /*
+This shouldn't be used, but is useful for hacking. Some problems inherently give rise to divergent
+network training, whereby weights/outputs grow to +/-infinity or other huge numbers.
+
+This allow resetting the network and starting over when such a condition is reached.
+*/
+void MultilayerNetwork::ResetWeights()
+{
+
+}
+
+
+/*
 Given some file of saved weights formatted as by SaveWeights(), this
 deserializes them back into the network. Note this does not set eta, momentum,
 etc., which is the client's responsibility.

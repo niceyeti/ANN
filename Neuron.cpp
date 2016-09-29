@@ -120,10 +120,10 @@ of popular activations and their derivatives.
 double Neuron::Tanh(double expt)
 {
 	//these are correct to 20 or so decimals
-	if (expt <= -20.0){
+	if(expt <= -20.0){
 		return -1.0;
 	}
-	if (expt >= 20.0){
+	if(expt >= 20.0){
 		return 1.0;
 	}
 
