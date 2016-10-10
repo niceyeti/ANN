@@ -1,2 +1,3 @@
 #!/bin/bash
-g++ Neuron.cpp MultilayerNetwork.cpp main.cpp -o testANN -std=c++11
+echo compiling nn to testAnn with full optimizations...
+g++ Neuron.cpp MultilayerNetwork.cpp main.cpp -o testANN -std=c++11 -O3

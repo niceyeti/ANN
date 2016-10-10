@@ -508,7 +508,7 @@ The gist:
 		Ad hoc for now. Can use maxIterations, error-reduction-threshold, or otherwise.
 		
 */
-void MultilayerNetwork::BatchTrain(const vector<vector<double> >& dataset, double eta, double momentum)
+void MultilayerNetwork::StochasticBatchTrain(const vector<vector<double> >& dataset, double eta, double momentum)
 {
 	bool done = false;
 	string dummy;

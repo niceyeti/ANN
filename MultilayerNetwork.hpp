@@ -72,7 +72,7 @@ class MultilayerNetwork{
 		void UpdateWeights(const vector<double>& inputs, double target);
 		void BackpropagateError(const vector<double>& inputs, double target);
 		void Backpropagate(const vector<double>& example);
-		void BatchTrain(const vector<vector<double> >& dataset, double eta, double momentum);
+		void StochasticBatchTrain(const vector<vector<double> >& dataset, double eta, double momentum);
 		void Test(const string& outputPath, vector<vector<double> >& testSet);
 		MultilayerNetwork();
 		MultilayerNetwork(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);

@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 	//	}
 	//	cout << endl;
 	//}
-	nn.BatchTrain(dataset, eta, momentum);
+	nn.StochasticBatchTrain(dataset, eta, momentum);
 
 	/*
 	dataset.clear();

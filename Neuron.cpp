@@ -100,14 +100,14 @@ const char* Neuron::FpClassify(double x)
 
 void Neuron::ValidateOutput()
 {
-	if(!std::isnormal(this->Output)){
+	if(!std::isnormal(this->Output) && this->Output != 0.0){
 		cout << "WARNING Neuron Output non-normal: " << FpClassify(Output) << endl; 
 	}
 }
 
 void Neuron::ValidateSignal()
 {
-	if(!std::isnormal(this->Signal)){
+	if(!std::isnormal(this->Signal) && this->Signal != 0.0){
 		cout << "WARNING Neuron Signal non-normal: " << FpClassify(Signal) << endl; 
 	}
 }
