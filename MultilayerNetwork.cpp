@@ -2,6 +2,8 @@
 
 MultilayerNetwork::MultilayerNetwork()
 {
+	srand(time(NULL));
+	
 	_momentum = 0;
 	_eta = 0;
 	_weightDecayRate = 0;
@@ -10,6 +12,8 @@ MultilayerNetwork::MultilayerNetwork()
 
 MultilayerNetwork::MultilayerNetwork(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits)
 {
+	srand(time(NULL));
+
 	_momentum = 0;
 	_eta = 0.1;
 	_weightDecayRate = 0;
@@ -340,14 +344,12 @@ void MultilayerNetwork::AssignRandomWeights()
 {
 	int i, j, l;
 	
+	//srand(time(NULL));
+	
 	//TODO: change the assignment to a zero-mean Gaussian, or other init per lit recommendations.
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
-			for(j = 0; j < _layers[l][i].Weights.size(); j++){
-				//inits random weights in range [-1.0,1.0]
-				_layers[l][i].Weights[j].w = (((double)(rand() % 400)) / 100.0) - 1.0;
-				_layers[l][i].Weights[j].dw = 0.0;
-			}
+			_layers[l][i].AssignRandomWeights(3.0,-1.0);
 		}
 	}
 	
@@ -432,7 +434,7 @@ is meant as a convenience for online learners, like in Q-learning.
 */
 void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, double target)
 {
-	double dw, reg, input;
+	double dw, input;
 
 	if(!IsOutputNormal()){
 		cout << "ERROR one or more outputs abnormal, ABORTING UPDATEWEIGHTS()" << endl;
@@ -470,13 +472,11 @@ void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, double targe
 					//see Haykin, Neural Nets. For momentum, the previous dw is used to add momentum to the weight update.
 					_layers[l][i].Weights[j].w = _momentum * _layers[l][i].Weights[j].dw + dw + _layers[l][i].Weights[j].w;
 					_layers[l][i].Weights[j].dw = dw;
-					//subtract the regularization term (0.0 if unused)
-					_layers[l][i].Weights[j].w -= reg;
 				}
 
 				//subtract the regularization term (0.0 if unused) after all updates are done
 				if(_weightDecayRate != 0.0){
-					_layers[l][i].Weights[j].w -= (_weightDecayRate * _layers[l][i].Weights[j].w);
+					_layers[l][i].Weights[j].w *= (1.0 - _weightDecayRate);
 				}
 				//printf("%f\n",_layers[l][i].Weights[j]);
 			}
@@ -529,9 +529,10 @@ void MultilayerNetwork::StochasticBatchTrain(const vector<vector<double> >& data
 	convergence = 0;
 	SetEta(eta);
 	SetMomentum(momentum); //reportedly a good value is 0.5 (see Haykin)
+	SetWeightDecay(0.0001);
 
 	//while(netError > convergenceThreshold){
-	while(iterations < 50000 && !done){
+	while(iterations < 500000 && !done){
 
 		/*
 		//serial/deserialization testing
@@ -585,7 +586,7 @@ void MultilayerNetwork::StochasticBatchTrain(const vector<vector<double> >& data
 	}
 
 	PrintWeights();
-	cout << "Minimum error: " << minError << " at iteration " << minIteration << endl;
+	cout << "Minimum avg error per 1000 examples: " << minError << " at iteration " << minIteration << endl;
 }
 
 /*

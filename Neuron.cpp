@@ -2,6 +2,8 @@
 
 Neuron::Neuron(int numInputs, ActivationFunction methodType)
 {
+	srand(time(NULL));
+
 	Weights.resize(numInputs);
 	for(int i = 0; i < Weights.size(); i++){
 		Weights[i].w = 0;
@@ -148,6 +150,22 @@ double Neuron::CalculateSignal()
 	Signal = InnerProduct(Inputs, Weights);
 	
 	return Signal;
+}
+
+/*
+Assigns random weights to the neuron, restricted to range [low,high].
+*/
+void Neuron::AssignRandomWeights(double high, double low)
+{
+	//srand(time(NULL));
+
+	for(int i = 0; i < Weights.size(); i++){
+		//inits random weights in range [-1.0,1.0]
+		Weights[i].w = ((double)(rand() % 10000) / (double)10000.0) * (high - low) + low;
+		Weights[i].dw = 0.0;
+		cout << "weight " << i << " " << Weights[i].w << endl;
+		//Weights[i].w = (((double)(rand() % 400)) / 100.0) - 1.0;
+	}
 }
 
 void Neuron::Stimulate()
