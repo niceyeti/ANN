@@ -349,7 +349,7 @@ void MultilayerNetwork::AssignRandomWeights()
 	//TODO: change the assignment to a zero-mean Gaussian, or other init per lit recommendations.
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
-			_layers[l][i].AssignRandomWeights(3.0,-1.0);
+			_layers[l][i].AssignRandomWeights(2.0,-1.0);
 		}
 	}
 	

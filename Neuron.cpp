@@ -168,6 +168,20 @@ void Neuron::AssignRandomWeights(double high, double low)
 	}
 }
 
+//Assigns w to all weights of a neuron; this is for things like logistic regression models,
+//where the agent cannot/should not estimate neuron parameters except periodically/offline,
+//or nay other non-backprop scheme where the agent manually assigns weights.
+void Neuron::AssignUniformWeights(double w)
+{
+	for(int i = 0; i < Weights.size(); i++){
+		Weights[i].w = w;
+		Weights[i].dw = 0.0;
+		cout << "weight " << i << " " << Weights[i].w << endl;
+		//Weights[i].w = (((double)(rand() % 400)) / 100.0) - 1.0;
+	}
+}
+
+
 void Neuron::Stimulate()
 {
 	CalculateSignal();

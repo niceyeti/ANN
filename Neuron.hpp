@@ -43,6 +43,7 @@ class Neuron{
 		void NullifyInputPtrs();
 		void Stimulate();
 		double CalculateSignal();
+		void AssignUniformWeights(double w);
 		void AssignRandomWeights(double high, double low);
 		void ValidateSignal();
 		void ValidateOutput();
