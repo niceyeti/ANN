@@ -50,7 +50,7 @@ class MultilayerNetwork{
 		void SetWeightDecay(double decayRate);
 		void ReadNetwork(const string& path);
 		void SaveNetwork(const string& path);
-		void AssignRandomWeights();
+		void AssignRandomWeights(double high=1.0, double low=0.0);
 		void ReadCsvDataset(const string& path, vector<vector<double> >& output);
 		void SetMomentum(double momentum);
 		bool IsOutputNormal();

@@ -146,7 +146,7 @@ void MultilayerNetwork::BuildNet(int numLayers, int numInputs, int numHiddenUnit
 void MultilayerNetwork::InitializeWeights()
 {
 	//intialize the weights to random values
-	AssignRandomWeights();
+	AssignRandomWeights(1.0,0.0);
 }
 
 /*
@@ -340,7 +340,7 @@ void MultilayerNetwork::_parseCsvFloats(string& input, vector<double>& vals)
 /*
 There are specific strategies for initializing the weights (see Haykin). Here they are just init'ed with random numbers.
 */
-void MultilayerNetwork::AssignRandomWeights()
+void MultilayerNetwork::AssignRandomWeights(double high, double low)
 {
 	int i, j, l;
 	
@@ -349,7 +349,7 @@ void MultilayerNetwork::AssignRandomWeights()
 	//TODO: change the assignment to a zero-mean Gaussian, or other init per lit recommendations.
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
-			_layers[l][i].AssignRandomWeights(2.0,-1.0);
+			_layers[l][i].AssignRandomWeights(1.0,0.0);
 		}
 	}
 	
