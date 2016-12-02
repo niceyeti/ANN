@@ -12,6 +12,16 @@
 
 using namespace std;
 
+
+//A straightforward nn training labelled-example class for supervised learning
+class TrainingExample{
+	public:
+		TrainingExample()=delete;
+		TrainingExample(const vector<double>& state, double rewardTarget);
+		vector<double> xs;
+		double target;
+};
+
 /*
 Implements a basic, Multilayer ANN with sigmoidal units.
 
@@ -69,10 +79,11 @@ class MultilayerNetwork{
 		bool IsValidExample(const vector<double>& example);
 		void BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
 		void Classify(const vector<double>& inputs);
-		void UpdateWeights(const vector<double>& inputs, double target);
-		void BackpropagateError(const vector<double>& inputs, double target);
+		void UpdateWeights(const vector<double>& inputs, const double target);
+		void BackpropagateError(const vector<double>& inputs, const double target);
 		void Backpropagate(const vector<double>& example);
 		void StochasticBatchTrain(const vector<vector<double> >& dataset, double eta, double momentum);
+		void StochasticBatchTrain(vector<TrainingExample>& examples, const int iterations);
 		void Test(const string& outputPath, vector<vector<double> >& testSet);
 		MultilayerNetwork();
 		MultilayerNetwork(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);

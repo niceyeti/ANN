@@ -1,5 +1,11 @@
 #include "MultilayerNetwork.hpp"
 
+TrainingExample::TrainingExample(const vector<double>& state, double rewardTarget)
+{
+	xs = state;
+	target = rewardTarget;
+}
+
 MultilayerNetwork::MultilayerNetwork()
 {
 	srand(time(NULL));
@@ -157,7 +163,7 @@ void MultilayerNetwork::PrintWeights()
 	int i, j, l;
 	
 	//print each layer
-	for(l =0; l < _layers.size(); l++){
+	for(l = 0; l < _layers.size(); l++){
 		//print each neuron in this layer
 		cout << "Layer " << l << " weights: " << endl;
 		for(i = 0; i < _layers[l].size(); i++){
@@ -171,6 +177,8 @@ void MultilayerNetwork::PrintWeights()
 		}
 	}
 }
+
+
 
 /*
 When written to file, the network weights will be written out in layers, formatted as:
@@ -395,7 +403,7 @@ by that single example. Hence this function is stateful, in that it assumes the 
 outputs have been driven by a specific example. The reason this is public is for clients
 that do online learning, like in approximate Q-learning.
 */
-void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, double target)
+void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, const double target)
 {
 	int i, j, l;
 	double sum;
@@ -432,7 +440,7 @@ Like Backpropagate(), this publicly exposes the weight-update step, after the ne
 driven with Classify() and the error back-propagated by Backpropagate(). Again, exposing this publicly
 is meant as a convenience for online learners, like in Q-learning.
 */
-void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, double target)
+void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, const double target)
 {
 	double dw, input;
 
@@ -590,6 +598,60 @@ void MultilayerNetwork::StochasticBatchTrain(const vector<vector<double> >& data
 }
 
 /*
+Anoterh wrapper for stochastic batch training. Its up to the client to initialize the network as desired before call. 
+*/
+void MultilayerNetwork::StochasticBatchTrain(vector<TrainingExample>& examples, const int iterations)
+{
+	//string dummy;
+	int minIteration, ringIndex;
+	double avgError, minError;
+	vector<double> errorHistory;
+	
+	//sliding error-window for viewing long term error changes
+	errorHistory.resize(500, 0.0);
+	ringIndex = 0;
+	minError = 10000000;
+
+	for(int i = 0; i < iterations; i++){
+		//Backprop a random example
+		TrainingExample& te = examples[ rand() % examples.size() ];
+		Classify(te.xs);
+		BackpropagateError(te.xs, te.target);
+		UpdateWeights(te.xs, te.target);
+		
+		//All the following is just error tracking and reporting
+		errorHistory[ringIndex] = abs( GetNetError() );
+		ringIndex = (ringIndex + 1) % (int)errorHistory.size();
+		if(i % (int)errorHistory.size() == (int)(errorHistory.size() - 1)){
+			//average the error of the last k examples learned
+			avgError = 0.0;
+			for(int j = 0; j < errorHistory.size(); j++){
+				avgError += errorHistory[j];
+				errorHistory[j] = 0;
+			}
+			avgError /= (double)errorHistory.size();
+			//cout << "\rIteration " << iterations << " avg error: " << avgError << "                " << flush;
+			cout << "Iteration " << i << " avg error: " << avgError << "                " << endl;
+			if(avgError < minError){
+				minError = avgError;
+				minIteration = iterations;
+			}
+
+			/*
+			PrintWeights();
+			cout << "Min error: " << minError << "  iteration " << minIteration << endl;
+			cout << "Continue? Enter 1 to end training: " << flush;
+			cin >> dummy;
+			done = dummy[0] == '1';
+			*/
+		}
+	}
+	
+	PrintWeights();
+	cout << "Minimum avg error per 1000 examples: " << minError << " at iteration " << minIteration << endl;
+}
+
+/*
 Just a convenient wrapper for learning from a single example: drive the outputs, backpropagate
 the error, and update the weights based off the single example.
 */
@@ -621,7 +683,7 @@ bool MultilayerNetwork::IsValidExample(const vector<double>& example)
 
 /*
 Assuming Backpropagate() has been called after the network has been driven by some example, this
-just sums across the error across all output nodes.
+sums across the error across all output nodes.
 
 In the future this could be factored or paramterized somehow to support error measures for
 different gradient definitions.
