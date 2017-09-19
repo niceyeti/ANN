@@ -83,6 +83,77 @@ void MultilayerNetwork::_nullifyLayer(vector<Neuron>& layer)
 	
 }
 
+
+void StochasticEncoderTrain();
+
+
+/*
+Builds a 'deep' network of fully-connected layers using the schema provided by the function parameters. The only difference
+is the higher level of parameterization; this could eliminate BuildNet().
+
+@neuronsPerLayer: The number of neurons per layer, indexed via 0=first hidden layer, 1=second hidden layer, etc.
+*/
+void BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
+{
+	int i, j, l, numLayerInputs;
+
+	//clear any existing model
+	Clear();
+
+	//init the neuron layers
+	_layers.resize(numLayers);
+
+	//layout the layers
+	for(i = 0; i < (numLayers-1); i++){
+		//set number of inputs to either the number of network inputs, of the number of neurons in the previous layer (for successive hidden layers)
+		if(i == 0){
+			numLayerInputs = numInputs;
+		}
+		else{
+			numLayerInputs = _layers[i-1].size();
+		}
+		
+		_layers[i].resize(neuronsPerLayer[i], Neuron(numLayerInputs + 1, activationSchema[i]) );  //plus one for this layer's bias
+		_nullifyLayer(_layers[i]); //nullify this layer's input pointers before connection in next steps
+	}
+
+	//set up the inter-layer connections
+	for(l = numLayers - 1; l > 0; l--){
+		vector<Neuron>& prevLayer = _layers[l-1];
+		vector<Neuron>& curLayer = _layers[l];
+		for(i = 0; i < curLayer.size(); i++){
+			for(j = 0; j < prevLayer.size(); j++){
+				//assign the (j+1)th previous neuron's output to the ith neuron's jth input; the +1 is to account for the bias in the zeroeth index
+				curLayer[i].Inputs[j+1] = &prevLayer[j].Output;
+			}
+		}
+	}
+
+	//connect the bias inputs; the zeroeth input of every neuron will be a bias weight
+	_biases.resize(numLayers);
+	for(l = _layers.size()-1; l >= 0; l--){
+		//init the 0th input of every neuron in this layer to the bias for the layer
+		for(i = 0; i < _layers[l].size(); i++){
+			_layers[l][i].Inputs[0] = &_biases[l];
+		}
+	}
+
+	//initialize the biases to constant 1.0
+	for(i = 0; i < _biases.size(); i++){
+		_biases[i] = 1.0;
+	}
+}
+
+void MultilayerNetwork::BuildDeepBinaryClassifier(int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
+{
+	BuildEncoderNetwork(numLayers, neuronsPerLayer, activationSchema);
+}
+
+void MultilayerNetwork::BuildDeepMultiLabelNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
+{
+	BuildEncoderNetwork(numLayers, neuronsPerLayer, activationSchema);
+}
+
 /*
 A builder; this could be moved to some builder class
 

@@ -78,6 +78,10 @@ class MultilayerNetwork{
 		const char* FpClassify(double x);
 		bool IsValidExample(const vector<double>& example);
 		void BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
+		void BuildEncoderNetwork(int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
+		void BuildDeepBooleanClassifier(); //likely just wraps BuildEncoderNetwork
+		void StochasticEncoderTrain();
+		
 		void Classify(const vector<double>& inputs);
 		void UpdateWeights(const vector<double>& inputs, const double target);
 		void BackpropagateError(const vector<double>& inputs, const double target);
