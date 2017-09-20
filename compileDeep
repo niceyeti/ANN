@@ -1,0 +1,3 @@
+#!/bin/bash
+echo compiling nn to ./dnn with full optimizations...
+g++ Neuron.cpp MultilayerNetwork.cpp deep.cpp -o dnn -std=c++11 -O3
