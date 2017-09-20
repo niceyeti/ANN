@@ -7,7 +7,6 @@ For process mining graph collections, the collection of boolean vectors represen
 This is unusual, since the input size of the neural net is not fixed, but changes wrt the v^2, the number of 
 possible directed edges in the network.
 */
-
 void GetLayerSizeSeq(char* arg, vector<int>& neuronsPerLayer)
 {
 	char *ptrs[50] = {NULL};
