@@ -103,9 +103,9 @@ void BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer,
 	//init the neuron layers
 	_layers.resize(numLayers);
 
-	//layout the layers
+	//lay out the layers
 	for(i = 0; i < (numLayers-1); i++){
-		//set number of inputs to either the number of network inputs, of the number of neurons in the previous layer (for successive hidden layers)
+		//set number of inputs to either the number of network inputs, or the number of neurons in the previous layer (for successive hidden layers)
 		if(i == 0){
 			numLayerInputs = numInputs;
 		}
@@ -117,7 +117,7 @@ void BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer,
 		_nullifyLayer(_layers[i]); //nullify this layer's input pointers before connection in next steps
 	}
 
-	//set up the inter-layer connections
+	//set up the inter-layer connections, fully connected
 	for(l = numLayers - 1; l > 0; l--){
 		vector<Neuron>& prevLayer = _layers[l-1];
 		vector<Neuron>& curLayer = _layers[l];
@@ -157,8 +157,8 @@ void MultilayerNetwork::BuildDeepMultiLabelNetwork(int numInputs, int numLayers,
 /*
 A builder; this could be moved to some builder class
 
-@numInputs: The dimension of the input data, such as 2 or 3-d. The network neurons will be configured with numInputs + 1 inputs,
-where the additional input is for the bias.
+@numInputs: The dimension of the input data, such as 2 or 3-d. The network neurons will be configured
+with numInputs + 1 inputs, where the additional input is for the bias.
 @numInputs: number of inputs (attributes)
 @numLayers: Number of layers. This should always be two, but its fun to experiment...
 @numHiddenUnits: Number of hidden units in the hidden layer
