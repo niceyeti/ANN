@@ -84,9 +84,6 @@ void MultilayerNetwork::_nullifyLayer(vector<Neuron>& layer)
 }
 
 
-void StochasticEncoderTrain(){};
-
-
 /*
 Builds a 'deep' network of fully-connected layers using the schema provided by the function parameters. The only difference
 is the higher level of parameterization; this could eliminate BuildNet().
@@ -144,9 +141,14 @@ void MultilayerNetwork::BuildDeepNetwork(int numInputs, int numLayers, vector<in
 	}
 }
 
-void MultilayerNetwork::BuildDeepBinaryClassifier(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
+void MultilayerNetwork::BuildBincoder(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
 {
 	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema);
+	
+	//clamp all biases to zero; encoders don't have biases
+	for(int i = 0; i < _biases.size(); i++){
+		_biases[i] = 0.0;
+	}
 }
 
 void MultilayerNetwork::BuildDeepMultiLabelNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
@@ -469,6 +471,45 @@ bool MultilayerNetwork::IsOutputNormal()
 }
 
 /*
+For the bincoder, the inputs are the target outputs
+
+Not yet sure how to write the error function borrowed from word2vec...
+
+void MultilayerNetwork::BincoderBackprop(const vector<double>& inputs)
+{
+	int i, j, l;
+	double sum;
+
+	//prevent nans, inf, etc from being backpropagated
+	if(!IsOutputNormal()){
+		cout << "ERROR one or more outputs abnormal, ABORTING BACKPROP" << endl;
+		return;
+	}
+
+	//calculate the final-layer deltas, which are just the signal-prime values
+	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
+	for(i = 0; i < finalLayer.size(); i++){
+		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
+		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (inputs[i] - finalLayer[i].Output);
+	}
+
+	//backpropagate the deltas through the layers
+	for(l = _layers.size() - 2; l >= 0; l--){
+		vector<Neuron>& leftLayer = _layers[l];
+		vector<Neuron>& rightLayer = _layers[l+1];
+		for(i = 0; i < leftLayer.size(); i++){
+			//sum products over the deltas/weights from the right layer
+			for(j = 0, sum = 0.0; j < rightLayer.size(); j++){
+				sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1].w); //plus one on the right, to account for the zeroeth bias weight
+			}
+			leftLayer[i].Delta = leftLayer[i].PhiPrime() * sum;
+		}
+	}
+	
+}
+*/
+
+/*
 Given that Classify() has been called for an example, this backpropagates the error given
 by that single example. Hence this function is stateful, in that it assumes the network
 outputs have been driven by a specific example. The reason this is public is for clients
@@ -511,7 +552,7 @@ Like Backpropagate(), this publicly exposes the weight-update step, after the ne
 driven with Classify() and the error back-propagated by Backpropagate(). Again, exposing this publicly
 is meant as a convenience for online learners, like in Q-learning.
 */
-void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, const double target)
+void MultilayerNetwork::UpdateWeights(const vector<double>& inputs)
 {
 	double dw, input;
 
@@ -559,6 +600,76 @@ void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, const double
 				}
 				//printf("%f\n",_layers[l][i].Weights[j]);
 			}
+		}
+	}
+}
+
+
+/*
+
+@dataset: A list of vectors, each of which is a sequence of 1's and 0's.
+*/
+void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum)
+{
+	bool done = false;
+	string dummy;
+	int iterations, minIteration, ringIndex;
+	double convergence, input, netError, minError;
+	vector<double> errorHistory;
+	
+	//sliding error-window for viewing long term error changes
+	errorHistory.resize(1000, 0.0);
+	ringIndex = 0;
+	
+	iterations = 0;
+	netError = 1;
+	minError = 10000000;
+	convergence = 0;
+
+	//initialize the weights to random values
+	InitializeWeights();
+
+	SetEta(eta);
+	SetMomentum(momentum); //reportedly a good value is 0.5 (see Haykin)
+	SetWeightDecay(0.01);
+
+	//while(netError > convergenceThreshold){
+	while(iterations < 500000 && !done){
+		
+		//randomly choose an example
+		const vector<double>& example = dataset[ iterations % dataset.size() ];
+		//learns from a single example: drives the network outputs, backprops, and updates the weights
+		Backpropagate(example);
+		
+		//track error info
+		netError = GetNetError();
+		//save this error level
+		errorHistory[ringIndex] = abs(netError);
+		ringIndex = (ringIndex + 1) % (int)errorHistory.size();
+		
+		iterations++;
+
+		if(iterations % 1000 == 999){
+			//average the error of the last k examples learned
+			double avgError = 0.0;
+			for(int i = 0; i < errorHistory.size(); i++){
+				avgError += errorHistory[i];
+				errorHistory[i] = 0;
+			}
+			avgError /= (double)errorHistory.size();
+			//cout << "\rIteration " << iterations << " avg error: " << avgError << "                " << flush;
+			cout << "Iteration " << iterations << " avg error: " << avgError << "                " << endl;
+			if(avgError < minError){
+				minError = avgError;
+				minIteration = iterations;
+			}
+
+			/*
+			PrintWeights();
+			cout << "Continue? Enter 1 to end training: " << flush;
+			cin >> dummy;
+			done = dummy[0] == '1';
+			*/
 		}
 	}
 }
@@ -688,7 +799,7 @@ void MultilayerNetwork::StochasticBatchTrain(vector<TrainingExample>& examples, 
 		TrainingExample& te = examples[ rand() % examples.size() ];
 		Classify(te.xs);
 		BackpropagateError(te.xs, te.target);
-		UpdateWeights(te.xs, te.target);
+		UpdateWeights(te.xs);
 		
 		//All the following is just error tracking and reporting
 		errorHistory[ringIndex] = abs( GetNetError() );
@@ -734,8 +845,20 @@ void MultilayerNetwork::Backpropagate(const vector<double>& example)
 		//back propagate the error measure/gradient
 		BackpropagateError(example, example.back());
 		//Update the weights based on the backpropagated error values
-		UpdateWeights(example, example.back());
+		UpdateWeights(example);
 	}
+}
+
+//Multilabel error backprop for multi-hot binary vectors
+//@example: A binary vector of 0's and 1's
+void MultilayerNetwork::BincoderBackprop(const vector<double>& example)
+{
+	//generic classification
+	Classify(example);
+	//back propagate the error measure/gradient
+	BincoderBackprop(example);
+	//Update the weights based on the backpropagated error values
+	UpdateWeights(example);
 }
 
 bool MultilayerNetwork::IsValidExample(const vector<double>& example)
@@ -914,10 +1037,11 @@ void MultilayerNetwork::ReadCsvDataset(const string& path, vector<vector<double>
 	while(getline(dataFile, line)){
 		tokens.clear();
 		Tokenize(line,',',tokens);
-		
+		cout << "here4" << endl;
 		//build a temp double vector containing the vals from the record, in double form
 		temp.clear();
 		for(i = 0; i < tokens.size(); i++){
+			cout << tokens[i] << endl;
 			temp.push_back(std::stod(tokens[i]));
 		}
 		

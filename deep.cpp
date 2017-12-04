@@ -42,8 +42,8 @@ bool GetActivationSeq(char* arg, vector<ActivationFunction>& activationFunctions
 void usage()
 {
 	cout << "Usage: ./batch [path to dataset] [#layers] [#numInputs] [hidden layer size sequence: 10,3,1] [function csv sequence: O,T,L ]  [eta] [momentum]" << endl;
-	cout << "For 'function' parameters, valid values are: LOGISTIC (O), TANH (T), or LINEAR (L)" << endl;
-	cout << "Function csv sequence: the sequence of functions used by each  hidden layer" << endl;
+	cout << "For 'function' parameters, valid values are: l(O)gistic, (T)anh, or (L)inear" << endl;
+	cout << "Function csv sequence: the sequence of functions used by each hidden layer" << endl;
 	cout << "Hidden layer sequence: a csv integer sequence signifying the number of neurons in each layer, where the first item is the size of the first hidden layer, etc" << endl;
 }
 
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 	nn.Tokenize(string(argv[4]), ',', tokens);
     for(int i = 0; i < tokens.size(); i++){
         neuronsPerLayer.push_back(stoi(tokens[i]));
-        cout << neuronsPerLayer[i] << endl;
+        cout << "Neurons in layer " << i << ": " << neuronsPerLayer[i] << endl;
     }
 
     if((int)neuronsPerLayer.size() != numLayers){
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
 	//	}
 	//	cout << endl;
 	//}
-	nn.StochasticBatchTrain(dataset, eta, momentum);
+	nn.BincoderTrain(dataset, eta, momentum);
 
 	/*
 	dataset.clear();

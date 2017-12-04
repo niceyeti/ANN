@@ -80,12 +80,14 @@ class MultilayerNetwork{
 		void BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
 
 		void BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
-		void BuildDeepBinaryClassifier(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
+		void BuildBincoder(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
         void BuildDeepMultiLabelNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
-		void StochasticEncoderTrain();
+		void BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum);
+		void BincoderBackprop(const vector<double>& example);
+		
 		
 		void Classify(const vector<double>& inputs);
-		void UpdateWeights(const vector<double>& inputs, const double target);
+		void UpdateWeights(const vector<double>& inputs);
 		void BackpropagateError(const vector<double>& inputs, const double target);
 		void Backpropagate(const vector<double>& example);
 		void StochasticBatchTrain(const vector<vector<double> >& dataset, double eta, double momentum);
