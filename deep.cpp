@@ -1,4 +1,5 @@
 #include "MultilayerNetwork.hpp"
+#include <cstring>
 
 /*
 Main driver for some preliminary viability testing of deep boolean networks
@@ -7,30 +8,11 @@ For process mining graph collections, the collection of boolean vectors represen
 This is unusual, since the input size of the neural net is not fixed, but changes wrt the v^2, the number of 
 possible directed edges in the network.
 */
-void GetLayerSizeSeq(char* arg, vector<int>& neuronsPerLayer)
-{
-	char *ptrs[50] = {NULL};
-	char* temp = NULL;
-	int j = 0;
-	
-	neuronsPerLayer.clear();
-	
-	temp = arg;
-	for(int i = 0; i < strlen(arg); i++){
-		if(arg[i] == ','){
-			ptrs[j] = temp;
-			j++;
-			arg[i] = '\0';
-		}
-	}
-	
-	for(int i = 0; i < j; i++){
-		neuronsPerLayer.push_back(stoi(ptrs[i]));
-	}
-}
 
-void GetActivationSeq(char* arg, vector<ActivationFunction>& activationFunctions)
+
+bool GetActivationSeq(char* arg, vector<ActivationFunction>& activationFunctions)
 {	
+    bool success = true;
 	activationFunctions.clear();
 	
 	for(int i = 0; i < strlen(arg); i++){
@@ -49,9 +31,12 @@ void GetActivationSeq(char* arg, vector<ActivationFunction>& activationFunctions
 				break;
 			default:
 				cout << "ERROR function symbol not found: " << arg[i] << endl;
+                success = false;
 				break;
 		}
 	}
+
+    return success;
 }
 
 void usage()
@@ -70,7 +55,9 @@ int main(int argc, char** argv)
 	double momentum, eta;
 	string path, outputFunction, hiddenFunction;
 	vector<vector<double> > dataset;
-	
+	MultilayerNetwork nn;	
+    vector<string> tokens;
+
 	if(argc < 8){
 		cout << "Incorrect num parameters: " << argc << endl;
 		usage();
@@ -81,13 +68,19 @@ int main(int argc, char** argv)
 	numLayers = stoi(argv[2]);
 	numInputs = stoi(argv[3]);
 	
-	if(GetLayerSizeSeq(argv[4]), neuronsPerLayer){
+	nn.Tokenize(string(argv[4]), ',', tokens);
+    for(int i = 0; i < tokens.size(); i++){
+        neuronsPerLayer.push_back(stoi(tokens[i]));
+        cout << neuronsPerLayer[i] << endl;
+    }
+
+    if((int)neuronsPerLayer.size() != numLayers){
 		cout << "Incorrect layer size sequence passed: " << argv[4] << endl;
-		usage()
+		usage();
 		return 1;
 	}
 	
-	if(GetActivationSeq(argv[5], activationFunctions) < 0){
+	if(!GetActivationSeq(argv[5], activationFunctions) || (int)activationFunctions.size() != numLayers){
 		cout << "Incorrect function sequence passed: " << argv[5] << endl;
 		usage();
 		return 1;
@@ -97,7 +90,6 @@ int main(int argc, char** argv)
 	momentum = stod(string(argv[7]));
 
 	//build the network from the cmd line parameters
-	MultilayerNetwork nn();
 	nn.BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationFunctions);
 	//set up the network output and hidden layer functions
 	//read the dataset

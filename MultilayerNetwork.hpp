@@ -52,11 +52,11 @@ class MultilayerNetwork{
 		vector<vector<Neuron> > _layers;
 		//eta performs best with some decaying value updates
 		void _nullifyLayer(vector<Neuron>& layer);
-		void _tokenize(const string &s, char delim, vector<string> &tokens);
 		void _parseCsvFloats(string& input, vector<double>& vals);
 		double _getParamVal(const string& param);
 	public:
 		string Name;
+		void Tokenize(const string &s, char delim, vector<string> &tokens);
 		void SetWeightDecay(double decayRate);
 		void ReadNetwork(const string& path);
 		void SaveNetwork(const string& path);
@@ -78,8 +78,10 @@ class MultilayerNetwork{
 		const char* FpClassify(double x);
 		bool IsValidExample(const vector<double>& example);
 		void BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
-		void BuildEncoderNetwork(int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
-		void BuildDeepBooleanClassifier(); //likely just wraps BuildEncoderNetwork
+
+		void BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
+		void BuildDeepBinaryClassifier(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
+        void BuildDeepMultiLabelNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
 		void StochasticEncoderTrain();
 		
 		void Classify(const vector<double>& inputs);

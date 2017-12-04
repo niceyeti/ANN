@@ -84,7 +84,7 @@ void MultilayerNetwork::_nullifyLayer(vector<Neuron>& layer)
 }
 
 
-void StochasticEncoderTrain();
+void StochasticEncoderTrain(){};
 
 
 /*
@@ -93,7 +93,7 @@ is the higher level of parameterization; this could eliminate BuildNet().
 
 @neuronsPerLayer: The number of neurons per layer, indexed via 0=first hidden layer, 1=second hidden layer, etc.
 */
-void BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
+void MultilayerNetwork::BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
 {
 	int i, j, l, numLayerInputs;
 
@@ -144,14 +144,14 @@ void BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer,
 	}
 }
 
-void MultilayerNetwork::BuildDeepBinaryClassifier(int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
+void MultilayerNetwork::BuildDeepBinaryClassifier(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
 {
-	BuildEncoderNetwork(numLayers, neuronsPerLayer, activationSchema);
+	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema);
 }
 
 void MultilayerNetwork::BuildDeepMultiLabelNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
 {
-	BuildEncoderNetwork(numLayers, neuronsPerLayer, activationSchema);
+	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema);
 }
 
 /*
@@ -403,7 +403,7 @@ void MultilayerNetwork::_parseCsvFloats(string& input, vector<double>& vals)
 {
 	vector<string> temp;
 
-	_tokenize(input,',',temp);
+	Tokenize(input,',',temp);
 
 	if(vals.size() < temp.size()){
 		//in the context of reading in a neural net, i just want to see this warning
@@ -873,7 +873,7 @@ void MultilayerNetwork::Test(const string& outputPath, vector<vector<double> >& 
 
 
 //Given a line, tokenize it using delim, storing the tokens in output
-void MultilayerNetwork::_tokenize(const string &s, char delim, vector<string> &tokens)
+void MultilayerNetwork::Tokenize(const string &s, char delim, vector<string> &tokens)
 {
     stringstream ss(s);
     string temp;
@@ -913,7 +913,7 @@ void MultilayerNetwork::ReadCsvDataset(const string& path, vector<vector<double>
 	
 	while(getline(dataFile, line)){
 		tokens.clear();
-		_tokenize(line,',',tokens);
+		Tokenize(line,',',tokens);
 		
 		//build a temp double vector containing the vals from the record, in double form
 		temp.clear();
