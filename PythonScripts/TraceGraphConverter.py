@@ -36,6 +36,7 @@ except:
 
 def usage():
 	print("Usage: python TraceConverter.py --tracePath=[path to trace file] --opath=[path to output file]")
+	print("--convertZeroes")
 
 #From the trace file, builds a dict mapping vertex names to row-ids
 def _getVertexDict(lines):
@@ -80,7 +81,7 @@ def _adjacencyListToBinaryString(vertexDict, adjacencyList):
 
 	return binString
 
-def Convert(tracePath, opath):
+def Convert(tracePath, opath, convertZeroes=False):
 	
 	print("Converting input traces...")
 	with open(tracePath, "r") as ifile:
@@ -94,10 +95,13 @@ def Convert(tracePath, opath):
 					#print(line)
 					try:
 						trace = eval(line)
-						id = trace[0]
+						traceId = trace[0]
 						adjacencyList = trace[1]
 						binString = _adjacencyListToBinaryString(vertexDict, adjacencyList)
-						#ofile.write(str(id)+","+binString+"\n")
+						binString = ",".join([bit for bit in binString])
+						if convertZeroes:  #some learning models prefer +/-1 for binary classification, not 1/0
+							binString = binString.replace("0","-1")
+						#ofile.write(str(traceId)+","+binString+"\n")
 						ofile.write(binString+"\n")
 					except:
 						traceback.print_exc()
@@ -132,7 +136,8 @@ def main():
 			usage()
 			exit()
 		
-	Convert(tracePath, opath)
+	convertZeroes = "--convertZeroes" in sys.argv
+	Convert(tracePath, opath, convertZeroes)
 	
 	
 	

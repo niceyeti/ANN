@@ -12,7 +12,7 @@ possible directed edges in the network.
 
 bool GetActivationSeq(char* arg, vector<ActivationFunction>& activationFunctions)
 {	
-    bool success = true;
+	bool success = true;
 	activationFunctions.clear();
 	
 	for(int i = 0; i < strlen(arg); i++){
@@ -31,12 +31,12 @@ bool GetActivationSeq(char* arg, vector<ActivationFunction>& activationFunctions
 				break;
 			default:
 				cout << "ERROR function symbol not found: " << arg[i] << endl;
-                success = false;
+				success = false;
 				break;
 		}
 	}
 
-    return success;
+	return success;
 }
 
 void usage()
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
 	string path, outputFunction, hiddenFunction;
 	vector<vector<double> > dataset;
 	MultilayerNetwork nn;	
-    vector<string> tokens;
+	vector<string> tokens;
 
 	if(argc < 8){
 		cout << "Incorrect num parameters: " << argc << endl;
@@ -69,12 +69,12 @@ int main(int argc, char** argv)
 	numInputs = stoi(argv[3]);
 	
 	nn.Tokenize(string(argv[4]), ',', tokens);
-    for(int i = 0; i < tokens.size(); i++){
-        neuronsPerLayer.push_back(stoi(tokens[i]));
-        cout << "Neurons in layer " << i << ": " << neuronsPerLayer[i] << endl;
-    }
+	for(int i = 0; i < tokens.size(); i++){
+		neuronsPerLayer.push_back(stoi(tokens[i]));
+		cout << "Neurons in layer " << i << ": " << neuronsPerLayer[i] << endl;
+	}
 
-    if((int)neuronsPerLayer.size() != numLayers){
+	if((int)neuronsPerLayer.size() != numLayers){
 		cout << "Incorrect layer size sequence passed: " << argv[4] << endl;
 		usage();
 		return 1;

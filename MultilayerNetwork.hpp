@@ -54,6 +54,7 @@ class MultilayerNetwork{
 		void _nullifyLayer(vector<Neuron>& layer);
 		void _parseCsvFloats(string& input, vector<double>& vals);
 		double _getParamVal(const string& param);
+		bool _isnormal(double val, bool allowZero=false);
 	public:
 		string Name;
 		void Tokenize(const string &s, char delim, vector<string> &tokens);
@@ -81,14 +82,15 @@ class MultilayerNetwork{
 
 		void BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
 		void BuildBincoder(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
-        void BuildDeepMultiLabelNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
+		void BuildDeepMultiLabelNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
 		void BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum);
-		void BincoderBackprop(const vector<double>& example);
+		void BincoderBackpropagateError(const vector<double>& inputs, bool allowZero);
+		void BincoderBackprop(const vector<double>& example); //main wrapper for driving network, back propping, and updating weights
 		
 		
 		void Classify(const vector<double>& inputs);
 		void UpdateWeights(const vector<double>& inputs);
-		void BackpropagateError(const vector<double>& inputs, const double target);
+		void BackpropagateError(const vector<double>& inputs, const double target, bool allowZero=false);
 		void Backpropagate(const vector<double>& example);
 		void StochasticBatchTrain(const vector<vector<double> >& dataset, double eta, double momentum);
 		void StochasticBatchTrain(vector<TrainingExample>& examples, const int iterations);

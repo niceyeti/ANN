@@ -456,13 +456,18 @@ void MultilayerNetwork::SetMomentum(double momentum)
 	_momentum = momentum;
 }
 
+bool MultilayerNetwork::_isnormal(double val, bool allowZero)
+{
+	return std::isnormal(val) || (allowZero && val == 0.0);
+}
+
 //Validates output of network is not nan, inf, etc. This is critical so these
 //values aren't backpropagated, which destroys the learned weights.
 bool MultilayerNetwork::IsOutputNormal()
 {
 	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
 	for(int i = 0; i < finalLayer.size(); i++){
-		if(!std::isnormal(finalLayer[i].Output)){
+		if(!_isnormal(finalLayer[i].Output)){
 			return false;
 		}
 	}
@@ -514,14 +519,16 @@ Given that Classify() has been called for an example, this backpropagates the er
 by that single example. Hence this function is stateful, in that it assumes the network
 outputs have been driven by a specific example. The reason this is public is for clients
 that do online learning, like in approximate Q-learning.
+
+@allowZero: Whether or not to treat zero as an abnormal target value
 */
-void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, const double target)
+void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, const double target, bool allowZero)
 {
 	int i, j, l;
 	double sum;
 
 	//prevent nans, inf, etc from being backpropagated
-	if(!std::isnormal(target) || !IsOutputNormal()){
+	if(!_isnormal(target, allowZero) || !IsOutputNormal()){
 		cout << "ERROR target ("<< target << ") or one or more outputs abnormal, ABORTING BACKPROP" << endl;
 		return;
 	}
@@ -531,6 +538,43 @@ void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, const d
 	for(i = 0; i < finalLayer.size(); i++){
 		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
 		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (target - finalLayer[i].Output);
+	}
+
+	//backpropagate the deltas through the layers
+	for(l = _layers.size() - 2; l >= 0; l--){
+		vector<Neuron>& leftLayer = _layers[l];
+		vector<Neuron>& rightLayer = _layers[l+1];
+		for(i = 0; i < leftLayer.size(); i++){
+			//sum products over the deltas/weights from the right layer
+			for(j = 0, sum = 0.0; j < rightLayer.size(); j++){
+				sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1].w); //plus one on the right, to account for the zeroeth bias weight
+			}
+			leftLayer[i].Delta = leftLayer[i].PhiPrime() * sum;
+		}
+	}
+}
+
+/*
+Backprop for a binary-encoder/multilabel network with multihot binary output vector.
+For binary-encoder, @inputs are also the target outputs.
+*/
+void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs, bool allowZero)
+{
+	int i, j, l;
+	double sum;
+
+	//prevent nans, inf, etc from being backpropagated
+	if(!IsOutputNormal()){
+		cout << "ERROR outputs abnormal, ABORTING BACKPROP" << endl;
+		return;
+	}
+
+	//calculate the final-layer deltas, which are just the signal-prime values
+	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
+	for(i = 0; i < finalLayer.size(); i++){
+		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
+		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (inputs[i] - finalLayer[i].Output);
+		//cout << finalLayer[i].Delta << endl;
 	}
 
 	//backpropagate the deltas through the layers
@@ -639,10 +683,11 @@ void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, do
 		//randomly choose an example
 		const vector<double>& example = dataset[ iterations % dataset.size() ];
 		//learns from a single example: drives the network outputs, backprops, and updates the weights
-		Backpropagate(example);
+		BincoderBackprop(example);
 		
 		//track error info
 		netError = GetNetError();
+		cout << "error: " << netError << endl;
 		//save this error level
 		errorHistory[ringIndex] = abs(netError);
 		ringIndex = (ringIndex + 1) % (int)errorHistory.size();
@@ -856,7 +901,7 @@ void MultilayerNetwork::BincoderBackprop(const vector<double>& example)
 	//generic classification
 	Classify(example);
 	//back propagate the error measure/gradient
-	BincoderBackprop(example);
+	BincoderBackpropagateError(example,true);
 	//Update the weights based on the backpropagated error values
 	UpdateWeights(example);
 }
@@ -864,7 +909,7 @@ void MultilayerNetwork::BincoderBackprop(const vector<double>& example)
 bool MultilayerNetwork::IsValidExample(const vector<double>& example)
 {
 	for(int i = 0; i < example.size(); i++){
-		if(!std::isnormal(example[i]) && example[i] != 0){
+		if(!_isnormal(example[i]) && example[i] != 0){
 			cout << "WARNING In MultilayerNetwork, isnormal() returned true for input example value example[" << i << "] of " << example.size() << " length vector" << endl;
 			cout << "Example will not be backpropagated" << endl;
 			cout << "Value: " << example[i] << endl;
@@ -924,6 +969,7 @@ void MultilayerNetwork::Classify(const vector<double>& inputs)
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
 			_layers[l][i].Stimulate();
+			cout << "output: " << _layers[l][i].Output << endl;
 		}
 	}
 	
@@ -937,7 +983,7 @@ void MultilayerNetwork::ValidateOutputs()
 {
 	//dbg: warn of NAN and other erroneous float values
 	for(int i = 0; i < _layers.back().size(); i++){
-		if(!std::isnormal(_layers.back()[i].Output)){
+		if(!_isnormal(_layers.back()[i].Output)){
 			cout << "WARNING isnormal() returned false for output neuron " << i << endl;
 			cout << FpClassify(_layers.back()[i].Output) << endl;
 		}
@@ -998,15 +1044,15 @@ void MultilayerNetwork::Test(const string& outputPath, vector<vector<double> >& 
 //Given a line, tokenize it using delim, storing the tokens in output
 void MultilayerNetwork::Tokenize(const string &s, char delim, vector<string> &tokens)
 {
-    stringstream ss(s);
-    string temp;
-	
+	stringstream ss(s);
+	string temp;
+
 	//clear any existing tokens
 	tokens.clear();
-	
-    while (getline(ss, temp, delim)) {
-        tokens.push_back(temp);
-    }
+
+	while (getline(ss, temp, delim)) {
+		tokens.push_back(temp);
+	}
 }
 
 /*
@@ -1037,11 +1083,11 @@ void MultilayerNetwork::ReadCsvDataset(const string& path, vector<vector<double>
 	while(getline(dataFile, line)){
 		tokens.clear();
 		Tokenize(line,',',tokens);
-		cout << "here4" << endl;
+		//cout << "here4: " << tokens.size() << " tokens" << endl;
 		//build a temp double vector containing the vals from the record, in double form
 		temp.clear();
 		for(i = 0; i < tokens.size(); i++){
-			cout << tokens[i] << endl;
+			//cout << tokens[i] << endl;
 			temp.push_back(std::stod(tokens[i]));
 		}
 		
@@ -1049,3 +1095,4 @@ void MultilayerNetwork::ReadCsvDataset(const string& path, vector<vector<double>
 	}
 	cout << "Dataset build complete. Read " << output.size() << " examples." << endl;
 }
+
