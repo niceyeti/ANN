@@ -9,6 +9,8 @@
 #include <cfloat>
 #include <sstream>
 #include <fstream>
+#include <unistd.h>
+
 
 using namespace std;
 
@@ -79,11 +81,12 @@ class MultilayerNetwork{
 		const char* FpClassify(double x);
 		bool IsValidExample(const vector<double>& example);
 		void BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
+		void PrintNetworkProperties();
 
-		void BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
-		void BuildBincoder(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
-		void BuildDeepMultiLabelNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema);
-		void BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum);
+		void BuildDeepNetwork(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema, double initialBias=0.0);
+		void BuildBincoder(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema);
+		void BuildDeepMultiLabelNetwork(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema);
+		void BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum, int maxIterations);
 		void BincoderBackpropagateError(const vector<double>& inputs, bool allowZero);
 		void BincoderBackprop(const vector<double>& example); //main wrapper for driving network, back propping, and updating weights
 		

@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 	}
 
 	if((int)neuronsPerLayer.size() != numLayers){
-		cout << "Incorrect layer size sequence passed: " << argv[4] << endl;
+		cout << "Incorrect layer size sequence passed: " << argv[4] << ". Must be same as passed numLayers: " << numLayers << endl;
 		usage();
 		return 1;
 	}
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
 	momentum = stod(string(argv[7]));
 
 	//build the network from the cmd line parameters
-	nn.BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationFunctions);
+	nn.BuildBincoder(numInputs, numLayers, neuronsPerLayer, activationFunctions);
 	//set up the network output and hidden layer functions
 	//read the dataset
 	nn.ReadCsvDataset(path, dataset);
@@ -101,7 +101,13 @@ int main(int argc, char** argv)
 	//	}
 	//	cout << endl;
 	//}
-	nn.BincoderTrain(dataset, eta, momentum);
+	int iterations = 20;
+
+	while(1){
+		nn.BincoderTrain(dataset, eta, momentum, iterations);
+		nn.BincoderTest(dataset);
+	}
+
 
 	/*
 	dataset.clear();

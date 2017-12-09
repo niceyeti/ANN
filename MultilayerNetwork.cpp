@@ -89,8 +89,9 @@ Builds a 'deep' network of fully-connected layers using the schema provided by t
 is the higher level of parameterization; this could eliminate BuildNet().
 
 @neuronsPerLayer: The number of neurons per layer, indexed via 0=first hidden layer, 1=second hidden layer, etc.
+@initialBias: The initial value for the biases. If 0.0, then the model will have effectively no bias.
 */
-void MultilayerNetwork::BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
+void MultilayerNetwork::BuildDeepNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema, double initialBias)
 {
 	int i, j, l, numLayerInputs;
 
@@ -101,7 +102,7 @@ void MultilayerNetwork::BuildDeepNetwork(int numInputs, int numLayers, vector<in
 	_layers.resize(numLayers);
 
 	//lay out the layers
-	for(i = 0; i < (numLayers-1); i++){
+	for(i = 0; i < numLayers; i++){
 		//set number of inputs to either the number of network inputs, or the number of neurons in the previous layer (for successive hidden layers)
 		if(i == 0){
 			numLayerInputs = numInputs;
@@ -137,21 +138,51 @@ void MultilayerNetwork::BuildDeepNetwork(int numInputs, int numLayers, vector<in
 
 	//initialize the biases to constant 1.0
 	for(i = 0; i < _biases.size(); i++){
-		_biases[i] = 1.0;
+		_biases[i] = initialBias;
 	}
 }
 
-void MultilayerNetwork::BuildBincoder(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
+void MultilayerNetwork::BuildBincoder(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema)
 {
-	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema);
-	
+	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema, 0.0);
+
 	//clamp all biases to zero; encoders don't have biases
 	for(int i = 0; i < _biases.size(); i++){
 		_biases[i] = 0.0;
 	}
+
+	AssignRandomWeights();
+	PrintNetworkProperties();
+	PrintWeights();
 }
 
-void MultilayerNetwork::BuildDeepMultiLabelNetwork(int numInputs, int numLayers, vector<int> neuronsPerLayer, vector<ActivationFunction> activationSchema)
+void MultilayerNetwork::PrintNetworkProperties()
+{
+	cout << "-----------Network-----------" << endl;
+
+	cout << "Layers: " << _layers.size() << endl;
+
+	cout << "Neurons per layer: ";
+	for(int i = 0; i < _layers.size(); i++){
+		cout << _layers[i].size() << "  ";
+	}
+	cout << endl;
+
+	cout << "Biases: " << _biases.size() << endl;
+	cout << "Bias values: ";
+	for(int i = 0; i < _biases.size(); i++){
+		cout << _biases[i] << "  ";
+	}
+	cout << endl;
+
+	cout << "Layer activation functions: ";
+	for(int i = 0; i < _layers.size(); i++){
+		cout << _layers[i][0].GetActivationFunctionString(_layers[i][0].PhiFunction) << "  ";
+	}
+	cout << endl;
+}
+
+void MultilayerNetwork::BuildDeepMultiLabelNetwork(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema)
 {
 	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema);
 }
@@ -574,8 +605,11 @@ void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs,
 	for(i = 0; i < finalLayer.size(); i++){
 		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
 		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (inputs[i] - finalLayer[i].Output);
-		//cout << finalLayer[i].Delta << endl;
+		//cout << "delta " << finalLayer[i].Delta << endl;
 	}
+
+	//cout << "final layer size: " << finalLayer.size() << endl;
+	//sleep(2);
 
 	//backpropagate the deltas through the layers
 	for(l = _layers.size() - 2; l >= 0; l--){
@@ -648,16 +682,45 @@ void MultilayerNetwork::UpdateWeights(const vector<double>& inputs)
 	}
 }
 
+/*
+Classifies some portion of a dataset and evaluates the raw hamming error, just
+for a raw test evaluation to see if a bincoding algorithm is working at all.
+
+This currently requires the output is TANH (-1 for 0, +1 for 1), and applies
+the function ceil(output) to each neuron to calculate the bits. So, an output
+of -0.999 would evaluate to 0, 0.6 to 1, clamping the real outputs to actual bit values.
+*/
+void MultilayerNetwork::BincoderTest(const vector<vector<double> >& dataset)
+{
+	hammingErrors = 0.0; //all bits not matching
+
+	for(int i = 0; i < dataset.size(); i++){
+		sample = dataset[i];
+
+		Classify(sample);
+		for(int j = 0; j < sample.size(); j++){
+			predictedBit = (int)ceil( _layers.back()[j].Output );
+			actualBit = (int)sample[j];
+			cout << "Predicted: " << predictedBit << "  Actual: " << actualBit << endl;
+			if(predictedBit != actualBit){
+				hammingErrors += 1;
+			}
+		}
+	}
+
+	cout << "Hamming errors: " << hammingError << endl;
+}
+
 
 /*
 
 @dataset: A list of vectors, each of which is a sequence of 1's and 0's.
 */
-void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum)
+void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum, int maxIterations)
 {
 	bool done = false;
 	string dummy;
-	int iterations, minIteration, ringIndex;
+	int minIteration, ringIndex;
 	double convergence, input, netError, minError;
 	vector<double> errorHistory;
 	
@@ -687,14 +750,14 @@ void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, do
 		
 		//track error info
 		netError = GetNetError();
-		cout << "error: " << netError << endl;
+		//cout << "error: " << netError << endl;
 		//save this error level
 		errorHistory[ringIndex] = abs(netError);
 		ringIndex = (ringIndex + 1) % (int)errorHistory.size();
 		
 		iterations++;
 
-		if(iterations % 1000 == 999){
+		if(iterations % 10 == 9){
 			//average the error of the last k examples learned
 			double avgError = 0.0;
 			for(int i = 0; i < errorHistory.size(); i++){
@@ -931,8 +994,8 @@ double MultilayerNetwork::GetNetError()
 {
 	double netError = 0.0;
 
-	for(int i = 0; i < _layers[_layers.size()-1].size(); i++){
-		netError += _layers[_layers.size()-1][i].Delta;
+	for(int i = 0; i < _layers.back().size(); i++){
+		netError += _layers.back()[i].Delta;
 	}
 
 	return netError;
@@ -969,7 +1032,7 @@ void MultilayerNetwork::Classify(const vector<double>& inputs)
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
 			_layers[l][i].Stimulate();
-			cout << "output: " << _layers[l][i].Output << endl;
+			//cout << _layers.size() << " " << l << " " << i << " output: " << _layers[l][i].Output << endl;
 		}
 	}
 	
