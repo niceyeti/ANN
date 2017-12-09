@@ -114,14 +114,17 @@ def CompressBinstrings(opath):
 			deletableCols[col] = True
 
 	numDeletableCols = sum([1 for col in deletableCols if deletableCols[col]])
-	print("Data has "+str(numDeletableCols)+" deletable columns")
+	print("Data has "+str(numDeletableCols)+" deletable columns of "+str(len(colVals.keys())))
 
 	#delete the columns
 	with open(opath, "w") as ofile:
 		for line in lines:
 			tokens = line.split(",")
-			tokens = [tokens[col] for col in range(len(tokens)) if deletableCols[col]]
-			ofile.write(",".join(tokens)+"\n")
+			vals = [] 
+			for col in range(len(tokens)):
+				if not deletableCols[col]:
+					vals.append(tokens[col])
+			ofile.write(",".join(vals)+"\n")
 			
 	print("Done.")
 
