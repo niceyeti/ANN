@@ -7,6 +7,13 @@ Let the input dataset be a vector of boolean components and a single +/-1 output
 For process mining graph collections, the collection of boolean vectors represent adjacency matrices.
 This is unusual, since the input size of the neural net is not fixed, but changes wrt the v^2, the number of 
 possible directed edges in the network.
+
+
+Keras seems to have this problem solved, using bp-mll: 
+	https://github.com/vanHavel/bp-mll-tensorflow
+	https://cs.nju.edu.cn/_upload/tpl/01/0b/267/template267/zhouzh.files/publication/tkde06a.pdf
+	Multi-Label Neural Networks with Applications to Functional Genomics and Text Categorization
+
 */
 
 
