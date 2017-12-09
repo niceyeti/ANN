@@ -87,6 +87,7 @@ class MultilayerNetwork{
 		void BuildBincoder(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema);
 		void BuildDeepMultiLabelNetwork(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema);
 		void BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum, int maxIterations);
+		void BincoderTest(const vector<vector<double> >& dataset);
 		void BincoderBackpropagateError(const vector<double>& inputs, bool allowZero);
 		void BincoderBackprop(const vector<double>& example); //main wrapper for driving network, back propping, and updating weights
 		

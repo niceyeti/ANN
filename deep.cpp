@@ -47,6 +47,11 @@ void usage()
 	cout << "Hidden layer sequence: a csv integer sequence signifying the number of neurons in each layer, where the first item is the size of the first hidden layer, etc" << endl;
 }
 
+/*
+Interestinly good result: ./dnn Data/bintraces.csv 4 1089 500,33,500,1089 T,T,T,T 0.1 0.01
+*/
+
+
 int main(int argc, char** argv)
 {
 	int numLayers, numInputs;
@@ -101,7 +106,7 @@ int main(int argc, char** argv)
 	//	}
 	//	cout << endl;
 	//}
-	int iterations = 20;
+	int iterations = 100;
 
 	while(1){
 		nn.BincoderTrain(dataset, eta, momentum, iterations);

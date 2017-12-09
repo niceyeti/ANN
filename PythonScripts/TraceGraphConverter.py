@@ -36,7 +36,7 @@ except:
 
 def usage():
 	print("Usage: python TraceConverter.py --tracePath=[path to trace file] --opath=[path to output file]")
-	print("--convertZeroes")
+	print("--convertZeroes, --compressAdjacencies (omits columns with values that never change; always pass this)")
 
 #From the trace file, builds a dict mapping vertex names to row-ids
 def _getVertexDict(lines):
@@ -81,7 +81,61 @@ def _adjacencyListToBinaryString(vertexDict, adjacencyList):
 
 	return binString
 
-def Convert(tracePath, opath, convertZeroes=False):
+"""
+Output from Convert may contain many columns in the input whose values never change, since
+graphs are typically very sparse. Keeping these values around screws up a learning algorithm
+by having it target these objective values when they aren't even needed, screwing up learning
+for the outputs that are meaningful. This function removes columns from a binstring file
+which never change in value.
+"""
+def CompressBinstrings(opath):
+	colVals = dict() # column -> values set;  if values set is len 1, then this column is single-valued and can be deleted
+
+	print("Compressing data...")
+
+	with open(opath, "r") as ifile:
+		lines = [line.strip() for line in ifile.readlines() if len(line.strip()) > 0]
+
+	#initialize the sets
+	for col in range(len(lines[0].split(","))):
+		colVals[col] = set()
+
+	#get the columnar value sets
+	for line in lines:
+		col = 0
+		for token in line.split(","):
+			colVals[col].add(token)
+			col += 1
+
+	#get indices of columns with only one value; these can be removed
+	deletableCols = [False for i in range(len(colVals.keys()))]
+	for col in colVals.keys():
+		if len(colVals[col]) == 1:
+			deletableCols[col] = True
+
+	numDeletableCols = sum([1 for col in deletableCols if deletableCols[col]])
+	print("Data has "+str(numDeletableCols)+" deletable columns")
+
+	#delete the columns
+	with open(opath, "w") as ofile:
+		for line in lines:
+			tokens = line.split(",")
+			tokens = [tokens[col] for col in range(len(tokens)) if deletableCols[col]]
+			ofile.write(",".join(tokens)+"\n")
+			
+	print("Done.")
+
+
+
+"""
+@convertZeroes: If true, zeroes converted to -1, such as for TANH based neural nets
+@compressAdjacencies: Graphical adjacency data is usually very sparse, and will contain
+many outputs that will always be one or zero. This causes problems for learning algorithms because
+they'll try to fit these irrelevant values. If true, these columns will be removed from the output
+binary string file.
+
+"""
+def Convert(tracePath, opath, convertZeroes=False, compressAdjacencies=False):
 	
 	print("Converting input traces...")
 	with open(tracePath, "r") as ifile:
@@ -106,7 +160,8 @@ def Convert(tracePath, opath, convertZeroes=False):
 					except:
 						traceback.print_exc()
 					#print(binString)
-
+	if compressAdjacencies:
+		CompressBinstrings(opath)
 
 def main():
 	if len(sys.argv) < 3:
@@ -115,6 +170,7 @@ def main():
 		
 	tracePath = ""
 	opath = ""
+	compressAdjacencies = "--compressAdjacencies" in sys.argv
 	for arg in sys.argv:
 		if "--tracePath=" in arg:
 			tracePath = arg.split("=")[1]
@@ -137,7 +193,7 @@ def main():
 			exit()
 		
 	convertZeroes = "--convertZeroes" in sys.argv
-	Convert(tracePath, opath, convertZeroes)
+	Convert(tracePath, opath, convertZeroes, compressAdjacencies)
 	
 	
 	

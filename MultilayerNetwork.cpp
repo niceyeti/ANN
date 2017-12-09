@@ -146,12 +146,12 @@ void MultilayerNetwork::BuildBincoder(int numInputs, int numLayers, const vector
 {
 	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema, 0.0);
 
-	//clamp all biases to zero; encoders don't have biases
+	AssignRandomWeights(2.0,-2.0);
+	//random weight assignment writes to _biases; clamp all biases to zero, since encoders don't have biases
 	for(int i = 0; i < _biases.size(); i++){
 		_biases[i] = 0.0;
 	}
 
-	AssignRandomWeights();
 	PrintNetworkProperties();
 	PrintWeights();
 }
@@ -461,7 +461,7 @@ void MultilayerNetwork::AssignRandomWeights(double high, double low)
 	//TODO: change the assignment to a zero-mean Gaussian, or other init per lit recommendations.
 	for(l = 0; l < _layers.size(); l++){
 		for(i = 0; i < _layers[l].size(); i++){
-			_layers[l][i].AssignRandomWeights(1.0,0.0);
+			_layers[l][i].AssignRandomWeights(high, low);
 		}
 	}
 	
@@ -692,23 +692,34 @@ of -0.999 would evaluate to 0, 0.6 to 1, clamping the real outputs to actual bit
 */
 void MultilayerNetwork::BincoderTest(const vector<vector<double> >& dataset)
 {
-	hammingErrors = 0.0; //all bits not matching
+	int lowErrors = 0, highErrors=0, hammingErrors = 0; //all bits not matching
+	int highBits = 0, lowBits=0;
 
 	for(int i = 0; i < dataset.size(); i++){
-		sample = dataset[i];
+		const vector<double>& sample = dataset[i];
 
 		Classify(sample);
 		for(int j = 0; j < sample.size(); j++){
-			predictedBit = (int)ceil( _layers.back()[j].Output );
-			actualBit = (int)sample[j];
-			cout << "Predicted: " << predictedBit << "  Actual: " << actualBit << endl;
-			if(predictedBit != actualBit){
-				hammingErrors += 1;
+			bool predictedBit = _layers.back()[j].Output > 0.0;
+			bool actualBit = sample[j] > 0.0;
+			//cout << "Predicted: " << predictedBit << "  Actual: " << actualBit << endl;
+			if(predictedBit == 0 && actualBit == 1){
+				lowErrors += 1;
+			}
+			else if(predictedBit == 1 && actualBit == 0){
+				highErrors += 1;
+			}
+			if(actualBit){
+				highBits += 1;
+			}
+			else{
+				lowBits += 1;
 			}
 		}
 	}
 
-	cout << "Hamming errors: " << hammingError << endl;
+	cout << "Low errors: " << lowErrors << "\tHigh errors: " << highErrors << endl;
+	cout << "Hamming errors: " << (lowErrors+highErrors) << "  High bits: " << highBits << "  Low bits: " << lowBits << endl;
 }
 
 
@@ -720,7 +731,7 @@ void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, do
 {
 	bool done = false;
 	string dummy;
-	int minIteration, ringIndex;
+	int iterations, minIteration, ringIndex;
 	double convergence, input, netError, minError;
 	vector<double> errorHistory;
 	
@@ -734,17 +745,17 @@ void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, do
 	convergence = 0;
 
 	//initialize the weights to random values
-	InitializeWeights();
+	//InitializeWeights();
 
 	SetEta(eta);
 	SetMomentum(momentum); //reportedly a good value is 0.5 (see Haykin)
 	SetWeightDecay(0.01);
 
 	//while(netError > convergenceThreshold){
-	while(iterations < 500000 && !done){
+	while(iterations < maxIterations && !done){
 		
 		//randomly choose an example
-		const vector<double>& example = dataset[ iterations % dataset.size() ];
+		const vector<double>& example = dataset[ rand() % dataset.size() ];
 		//learns from a single example: drives the network outputs, backprops, and updates the weights
 		BincoderBackprop(example);
 		
@@ -764,7 +775,7 @@ void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, do
 				avgError += errorHistory[i];
 				errorHistory[i] = 0;
 			}
-			avgError /= (double)errorHistory.size();
+			//avgError /= (double)errorHistory.size();
 			//cout << "\rIteration " << iterations << " avg error: " << avgError << "                " << flush;
 			cout << "Iteration " << iterations << " avg error: " << avgError << "                " << endl;
 			if(avgError < minError){
