@@ -23,6 +23,7 @@ MultilayerNetwork::MultilayerNetwork(int numLayers, int numInputs, int numHidden
 	_momentum = 0;
 	_eta = 0.1;
 	_weightDecayRate = 0;
+	_zeroIsNormal = true;
 
 	BuildNet(numLayers, numInputs, numHiddenUnits, numOutputUnits);
 }
@@ -146,7 +147,7 @@ void MultilayerNetwork::BuildBincoder(int numInputs, int numLayers, const vector
 {
 	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema, 0.0);
 
-	AssignRandomWeights(2.0,-2.0);
+	AssignRandomWeights(4.0,-4.0);
 	//random weight assignment writes to _biases; clamp all biases to zero, since encoders don't have biases
 	for(int i = 0; i < _biases.size(); i++){
 		_biases[i] = 0.0;
@@ -487,9 +488,9 @@ void MultilayerNetwork::SetMomentum(double momentum)
 	_momentum = momentum;
 }
 
-bool MultilayerNetwork::_isnormal(double val, bool allowZero)
+bool MultilayerNetwork::_isnormal(double val, bool zeroIsNormal)
 {
-	return std::isnormal(val) || (allowZero && val == 0.0);
+	return std::isnormal(val) || (zeroIsNormal && val == 0.0);
 }
 
 //Validates output of network is not nan, inf, etc. This is critical so these
@@ -498,7 +499,7 @@ bool MultilayerNetwork::IsOutputNormal()
 {
 	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
 	for(int i = 0; i < finalLayer.size(); i++){
-		if(!_isnormal(finalLayer[i].Output)){
+		if(!_isnormal(finalLayer[i].Output, _zeroIsNormal)){
 			return false;
 		}
 	}
@@ -506,44 +507,6 @@ bool MultilayerNetwork::IsOutputNormal()
 	return true;
 }
 
-/*
-For the bincoder, the inputs are the target outputs
-
-Not yet sure how to write the error function borrowed from word2vec...
-
-void MultilayerNetwork::BincoderBackprop(const vector<double>& inputs)
-{
-	int i, j, l;
-	double sum;
-
-	//prevent nans, inf, etc from being backpropagated
-	if(!IsOutputNormal()){
-		cout << "ERROR one or more outputs abnormal, ABORTING BACKPROP" << endl;
-		return;
-	}
-
-	//calculate the final-layer deltas, which are just the signal-prime values
-	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
-	for(i = 0; i < finalLayer.size(); i++){
-		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
-		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (inputs[i] - finalLayer[i].Output);
-	}
-
-	//backpropagate the deltas through the layers
-	for(l = _layers.size() - 2; l >= 0; l--){
-		vector<Neuron>& leftLayer = _layers[l];
-		vector<Neuron>& rightLayer = _layers[l+1];
-		for(i = 0; i < leftLayer.size(); i++){
-			//sum products over the deltas/weights from the right layer
-			for(j = 0, sum = 0.0; j < rightLayer.size(); j++){
-				sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1].w); //plus one on the right, to account for the zeroeth bias weight
-			}
-			leftLayer[i].Delta = leftLayer[i].PhiPrime() * sum;
-		}
-	}
-	
-}
-*/
 
 /*
 Given that Classify() has been called for an example, this backpropagates the error given
@@ -553,13 +516,13 @@ that do online learning, like in approximate Q-learning.
 
 @allowZero: Whether or not to treat zero as an abnormal target value
 */
-void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, const double target, bool allowZero)
+void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, const double target)
 {
 	int i, j, l;
 	double sum;
 
 	//prevent nans, inf, etc from being backpropagated
-	if(!_isnormal(target, allowZero) || !IsOutputNormal()){
+	if(!_isnormal(target, _zeroIsNormal) || !IsOutputNormal()){
 		cout << "ERROR target ("<< target << ") or one or more outputs abnormal, ABORTING BACKPROP" << endl;
 		return;
 	}
@@ -585,11 +548,25 @@ void MultilayerNetwork::BackpropagateError(const vector<double>& inputs, const d
 	}
 }
 
+
+void MultilayerNetwork::ResetNetworkWeightDeltas()
+{
+	for(int l = 0; l < _layers.size(); l++){
+		vector<Neuron>& layer = _layers[l]; 
+		for(int j = 0; j < layer.size(); j++){
+			Neuron& neuron = layer[j];
+			for(int i = 0; i < neuron.Weights.size(); i++){
+				neuron.Weights[i].dw = 0.0;
+			}
+		}
+	}
+}
+
 /*
 Backprop for a binary-encoder/multilabel network with multihot binary output vector.
 For binary-encoder, @inputs are also the target outputs.
 */
-void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs, bool allowZero)
+void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs)
 {
 	int i, j, l;
 	double sum;
@@ -603,6 +580,13 @@ void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs,
 	//calculate the final-layer deltas, which are just the signal-prime values
 	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
 	for(i = 0; i < finalLayer.size(); i++){
+		/*
+		double outError = inputs[i] - finalLayer[i].Output;
+		if(outError < 1.0){
+			outError *= 0.5;
+		}
+		finalLayer[i].Delta = finalLayer[i].PhiPrime() * outError;
+		*/
 		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
 		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (inputs[i] - finalLayer[i].Output);
 		//cout << "delta " << finalLayer[i].Delta << endl;
@@ -629,8 +613,9 @@ void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs,
 Like Backpropagate(), this publicly exposes the weight-update step, after the network outputs have been
 driven with Classify() and the error back-propagated by Backpropagate(). Again, exposing this publicly
 is meant as a convenience for online learners, like in Q-learning.
+@isBatchMode: If true, dw's are accumulated, and the weights themselves are not yet updated
 */
-void MultilayerNetwork::UpdateWeights(const vector<double>& inputs)
+void MultilayerNetwork::UpdateWeights(const vector<double>& inputs, bool isBatchMode)
 {
 	double dw, input;
 
@@ -641,12 +626,14 @@ void MultilayerNetwork::UpdateWeights(const vector<double>& inputs)
 
 	//now iterate and update the weights, from output layer to first hidden layer
 	for(int l = _layers.size()-1; l >= 0; l--){
+		vector<Neuron>& layer = _layers[l];
 		//iterate the neurons in this layer
-		for(int i = 0; i < _layers[l].size(); i++){
+		for(int i = 0; i < layer.size(); i++){
+			Neuron& neuron = layer[i];
 			//iterate the weights for this neuron
-			for(int j = 0; j < _layers[l][i].Weights.size(); j++){
+			for(int j = 0; j < neuron.Weights.size(); j++){
 				if(j == 0){ //for j==0, the bias weight is not associated with a previous neuron; the input is implicitly a constant 1.0
-					dw = _eta * _layers[l][i].Weights[0].w * _layers[l][i].Delta;
+					dw = _eta * neuron.Weights[0].w * neuron.Delta;
 				}
 				else{
 					//if this is the first hidden layer, the input comes from the input, rather than a previous neuron layer
@@ -657,26 +644,67 @@ void MultilayerNetwork::UpdateWeights(const vector<double>& inputs)
 					else{
 						input = _layers[l-1][j-1].Output;  //minus one, for the sake of skipping the bias weight
 					}
-					dw = _eta * _layers[l][i].Delta * input;
+					dw = _eta * neuron.Delta * input;
 				}
 
-				//the weight update
-				//printf("%f\n",_layers[l][i].Weights[j]);
+				//if in batch mode, only the weight deltas are updated/accumulated per example
+				if(isBatchMode){
+					neuron.Weights[j].dw += dw;
+				}
+				else{
+					//the normal weight update
+					//cout << "layer " << l << " update " << i << "," << j << "  : " << dW << endl;
+					if(_momentum == 0.0){ //no momentum, so ignore previous dw
+						neuron.Weights[j].w += dw;
+					}
+					else{
+						//see Haykin, Neural Nets. For momentum, the previous dw is used to add momentum to the weight update.
+						neuron.Weights[j].w = _momentum * neuron.Weights[j].dw + dw + neuron.Weights[j].w;
+						neuron.Weights[j].dw = dw;
+					}
+
+					//subtract the regularization term (0.0 if unused) after all updates are done
+					if(_weightDecayRate != 0.0){
+						neuron.Weights[j].w *= (1.0 - _weightDecayRate);
+					}
+				}
+			}
+		}
+	}
+}
+
+//Batch training accumulates dw's unil the end of an epoch, then updates the actual weights all at once
+//@numSamples: Used to normalize the magnitude of the update by the number of sample updates accumulated by the dw's
+void MultilayerNetwork::BatchWeightUpdate(int numSamples)
+{
+	/*
+	if(!IsOutputNormal()){
+		cout << "ERROR one or more outputs abnormal, ABORTING UPDATEWEIGHTS()" << endl;
+		return;
+	}
+	*/
+
+	//now iterate and update the weights, from output layer to first hidden layer
+	for(int l = _layers.size()-1; l >= 0; l--){
+		vector<Neuron>& layer = _layers[l];
+		//iterate the neurons in this layer
+		for(int i = 0; i < layer.size(); i++){
+			Neuron& neuron = layer[i];
+			//iterate the weights for this neuron
+			for(int j = 0; j < neuron.Weights.size(); j++){
 				//cout << "layer " << l << " update " << i << "," << j << "  : " << dW << endl;
-				if(_momentum == 0){ //no momentum, so ignore previous dw
-					_layers[l][i].Weights[j].w += dw;
+				if(_momentum == 0.0){ //no momentum, so ignore previous dw
+					neuron.Weights[j].w += neuron.Weights[j].dw;
 				}
 				else{
 					//see Haykin, Neural Nets. For momentum, the previous dw is used to add momentum to the weight update.
-					_layers[l][i].Weights[j].w = _momentum * _layers[l][i].Weights[j].dw + dw + _layers[l][i].Weights[j].w;
-					_layers[l][i].Weights[j].dw = dw;
+					neuron.Weights[j].w = _momentum * neuron.Weights[j].dw + neuron.Weights[j].dw + neuron.Weights[j].w;
 				}
 
 				//subtract the regularization term (0.0 if unused) after all updates are done
 				if(_weightDecayRate != 0.0){
-					_layers[l][i].Weights[j].w *= (1.0 - _weightDecayRate);
+					neuron.Weights[j].w *= (1.0 - _weightDecayRate);
 				}
-				//printf("%f\n",_layers[l][i].Weights[j]);
 			}
 		}
 	}
@@ -693,13 +721,14 @@ of -0.999 would evaluate to 0, 0.6 to 1, clamping the real outputs to actual bit
 void MultilayerNetwork::BincoderTest(const vector<vector<double> >& dataset)
 {
 	int lowErrors = 0, highErrors=0, hammingErrors = 0; //all bits not matching
-	int highBits = 0, lowBits=0;
+	int highBits = 0, lowBits=0, n = 0;
 
 	for(int i = 0; i < dataset.size(); i++){
 		const vector<double>& sample = dataset[i];
 
 		Classify(sample);
 		for(int j = 0; j < sample.size(); j++){
+			n++;
 			bool predictedBit = _layers.back()[j].Output > 0.0;
 			bool actualBit = sample[j] > 0.0;
 			//cout << "Predicted: " << predictedBit << "  Actual: " << actualBit << endl;
@@ -719,7 +748,7 @@ void MultilayerNetwork::BincoderTest(const vector<vector<double> >& dataset)
 	}
 
 	cout << "Low errors: " << lowErrors << "\tHigh errors: " << highErrors << endl;
-	cout << "Hamming errors: " << (lowErrors+highErrors) << "  High bits: " << highBits << "  Low bits: " << lowBits << endl;
+	cout << "Hamming errors: " << (lowErrors+highErrors) << "  High bits: " << highBits << "  Low bits: " << lowBits << " Hamming error: " << (double)(lowErrors+highErrors) /(double)n <<  endl;
 }
 
 
@@ -727,7 +756,7 @@ void MultilayerNetwork::BincoderTest(const vector<vector<double> >& dataset)
 
 @dataset: A list of vectors, each of which is a sequence of 1's and 0's.
 */
-void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum, int maxIterations)
+void MultilayerNetwork::BincoderOnlineTrain(const vector<vector<double> >& dataset, double eta, double momentum, int maxIterations, double l2Decay)
 {
 	bool done = false;
 	string dummy;
@@ -749,7 +778,7 @@ void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, do
 
 	SetEta(eta);
 	SetMomentum(momentum); //reportedly a good value is 0.5 (see Haykin)
-	SetWeightDecay(0.01);
+	SetWeightDecay(l2Decay);
 
 	//while(netError > convergenceThreshold){
 	while(iterations < maxIterations && !done){
@@ -757,7 +786,7 @@ void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, do
 		//randomly choose an example
 		const vector<double>& example = dataset[ rand() % dataset.size() ];
 		//learns from a single example: drives the network outputs, backprops, and updates the weights
-		BincoderBackprop(example);
+		BincoderBackprop(example,false);
 		
 		//track error info
 		netError = GetNetError();
@@ -768,7 +797,7 @@ void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, do
 		
 		iterations++;
 
-		if(iterations % 10 == 9){
+		if(iterations % 100 == 99){
 			//average the error of the last k examples learned
 			double avgError = 0.0;
 			for(int i = 0; i < errorHistory.size(); i++){
@@ -792,6 +821,81 @@ void MultilayerNetwork::BincoderTrain(const vector<vector<double> >& dataset, do
 		}
 	}
 }
+
+/*
+
+@dataset: A list of vectors, each of which is a sequence of 1's and 0's.
+*/
+void MultilayerNetwork::BincoderBatchTrain(const vector<vector<double> >& dataset, double eta, double momentum, int batchSize, int maxIterations, double l2Decay)
+{
+	bool done = false;
+	string dummy;
+	int i, iterations, minIteration, ringIndex;
+	double convergence, input, netError, minError;
+	vector<double> errorHistory;
+	
+	//sliding error-window for viewing long term error changes
+	errorHistory.resize(1000, 0.0);
+	ringIndex = 0;
+	
+	iterations = 0;
+	netError = 1;
+	minError = 10000000;
+	convergence = 0;
+
+	//initialize the weights to random values
+	//InitializeWeights();
+
+	SetEta(eta);
+	SetMomentum(momentum); //reportedly a good value is 0.5 (see Haykin)
+	SetWeightDecay(l2Decay);
+
+	while(iterations < maxIterations){
+		ResetNetworkWeightDeltas(); //reset accumulated weight deltas to 0.0
+		//batch accumulate errors over n random training examples
+		for(i = 0; i < batchSize && i < dataset.size(); i++){
+			//randomly choose an example
+			const vector<double>& example = dataset[ rand() % dataset.size() ];
+			//accumulates errors (deltas) from a bunch of examples
+			BincoderBackprop(example,true);
+		}
+		BatchWeightUpdate(i);
+
+		//track error info
+		netError = GetNetWeightDeltas() / batchSize;
+		//cout << "error: " << netError << endl;
+		//save this error level
+		errorHistory[ringIndex] = abs(netError);
+		ringIndex = (ringIndex + 1) % (int)errorHistory.size();
+		
+		iterations++;
+
+		if(iterations % 10 == 1){
+			//average the error of the last k examples learned
+			double avgError = 0.0;
+			for(int i = 0; i < errorHistory.size(); i++){
+				avgError += errorHistory[i];
+				errorHistory[i] = 0;
+			}
+			//avgError /= (double)errorHistory.size();
+			//cout << "\rIteration " << iterations << " avg error: " << avgError << "                " << flush;
+			cout << "Iteration " << iterations << " avg error: " << avgError << "                " << endl;
+			if(avgError < minError){
+				minError = avgError;
+				minIteration = iterations;
+			}
+
+			/*
+			PrintWeights();
+			cout << "Continue? Enter 1 to end training: " << flush;
+			cin >> dummy;
+			done = dummy[0] == '1';
+			*/
+		}
+	}
+}
+
+
 
 /*
 Runs the backpropagation algorithm from Duda. Also see Mustafa's Neural Nets CalTech lecture,
@@ -970,14 +1074,15 @@ void MultilayerNetwork::Backpropagate(const vector<double>& example)
 
 //Multilabel error backprop for multi-hot binary vectors
 //@example: A binary vector of 0's and 1's
-void MultilayerNetwork::BincoderBackprop(const vector<double>& example)
+//@isBatchMode: Directs UpdateWeights to accumulate dw's
+void MultilayerNetwork::BincoderBackprop(const vector<double>& example, bool isBatchMode)
 {
 	//generic classification
 	Classify(example);
 	//back propagate the error measure/gradient
-	BincoderBackpropagateError(example,true);
+	BincoderBackpropagateError(example);
 	//Update the weights based on the backpropagated error values
-	UpdateWeights(example);
+	UpdateWeights(example,isBatchMode);
 }
 
 bool MultilayerNetwork::IsValidExample(const vector<double>& example)
@@ -1010,6 +1115,30 @@ double MultilayerNetwork::GetNetError()
 	}
 
 	return netError;
+}
+
+/*
+For batch mode, only weight deltas can indicate the scale of errors being made at each epoch, as neuron deltas (the true error measure) are overwritten at each training example.
+Could instead accumulate the Deltas in the neurons, if a strict batch-error measure is needed.
+*/
+double MultilayerNetwork::GetNetWeightDeltas()
+{
+	double netDelta = 0.0;
+
+	//now iterate and update the weights, from output layer to first hidden layer
+	for(int l = _layers.size()-1; l >= 0; l--){
+		vector<Neuron>& layer = _layers[l];
+		//iterate the neurons in this layer
+		for(int i = 0; i < layer.size(); i++){
+			Neuron& neuron = layer[i];
+			//iterate the weights for this neuron
+			for(int j = 0; j < neuron.Weights.size(); j++){
+				netDelta += neuron.Weights[j].dw;
+			}
+		}
+	}
+
+	return netDelta;
 }
 
 /*
@@ -1057,7 +1186,7 @@ void MultilayerNetwork::ValidateOutputs()
 {
 	//dbg: warn of NAN and other erroneous float values
 	for(int i = 0; i < _layers.back().size(); i++){
-		if(!_isnormal(_layers.back()[i].Output)){
+		if(!_isnormal(_layers.back()[i].Output, _zeroIsNormal)){
 			cout << "WARNING isnormal() returned false for output neuron " << i << endl;
 			cout << FpClassify(_layers.back()[i].Output) << endl;
 		}

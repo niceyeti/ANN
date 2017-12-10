@@ -47,6 +47,7 @@ architectures (numbers of hidden layers, num hidden units/outputs, etc.), under 
 class MultilayerNetwork{
 	private:
 		bool _useRegularizer;
+		bool _zeroIsNormal;
 		double _eta;
 		double _weightDecayRate; //l2 regularizer
 		double _momentum;
@@ -56,7 +57,7 @@ class MultilayerNetwork{
 		void _nullifyLayer(vector<Neuron>& layer);
 		void _parseCsvFloats(string& input, vector<double>& vals);
 		double _getParamVal(const string& param);
-		bool _isnormal(double val, bool allowZero=false);
+		bool _isnormal(double val, bool zeroIsNormal=false);
 	public:
 		string Name;
 		void Tokenize(const string &s, char delim, vector<string> &tokens);
@@ -83,18 +84,22 @@ class MultilayerNetwork{
 		void BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
 		void PrintNetworkProperties();
 
+		void ResetNetworkWeightDeltas();
+		double GetNetWeightDeltas();
 		void BuildDeepNetwork(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema, double initialBias=0.0);
 		void BuildBincoder(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema);
 		void BuildDeepMultiLabelNetwork(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema);
-		void BincoderTrain(const vector<vector<double> >& dataset, double eta, double momentum, int maxIterations);
+		void BincoderOnlineTrain(const vector<vector<double> >& dataset, double eta, double momentum, int maxIterations, double l2Decay);
+		void BincoderBatchTrain(const vector<vector<double> >& dataset, double eta, double momentum, int batchSize, int maxIterations, double l2Decay);
 		void BincoderTest(const vector<vector<double> >& dataset);
-		void BincoderBackpropagateError(const vector<double>& inputs, bool allowZero);
-		void BincoderBackprop(const vector<double>& example); //main wrapper for driving network, back propping, and updating weights
-		
+		void BincoderBackpropagateError(const vector<double>& inputs);
+		void BincoderBackprop(const vector<double>& example, bool isBatchMode);
+		void BincoderOnlineBackprop(const vector<double>& example); //main wrapper for driving network, back propping, and updating weights
 		
 		void Classify(const vector<double>& inputs);
-		void UpdateWeights(const vector<double>& inputs);
-		void BackpropagateError(const vector<double>& inputs, const double target, bool allowZero=false);
+		void UpdateWeights(const vector<double>& inputs, bool isBatchMode=false);
+		void BatchWeightUpdate(int numSamples);
+		void BackpropagateError(const vector<double>& inputs, const double target);
 		void Backpropagate(const vector<double>& example);
 		void StochasticBatchTrain(const vector<vector<double> >& dataset, double eta, double momentum);
 		void StochasticBatchTrain(vector<TrainingExample>& examples, const int iterations);
