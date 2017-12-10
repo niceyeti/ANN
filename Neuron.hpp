@@ -12,9 +12,8 @@
 using namespace std;
 
 /*
-An implementation of linear discriminant functions. Hopefully I can keep these useful for both linear discriminant/regression
-applications, as well as for neural network components.
-
+An implementation of linear discriminant functions. Hopefully I can keep these useful for both linear
+discriminant/regression applications, as well as for neural network components.
 */
 
 //The weights are broken out into a primitive object type to accomodate for momentum and other weight heuristics. (See Haykin "momentum")
