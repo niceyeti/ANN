@@ -8,12 +8,14 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 using namespace std;
 
 /*
-An implementation of linear discriminant functions. Hopefully I can keep these useful for both linear
-discriminant/regression applications, as well as for neural network components.
+An implementation of linear discriminant functions. Hopefully I can keep these useful for both linear discriminant/regression
+applications, as well as for neural network components.
+
 */
 
 //The weights are broken out into a primitive object type to accomodate for momentum and other weight heuristics. (See Haykin "momentum")
@@ -22,8 +24,7 @@ struct Weight{
 	double dw;
 };
 
-
-enum ActivationFunction {TANH, LOGISTIC, LINEAR, SIGN};
+enum ActivationFunction {TANH, LOGISTIC, LINEAR, SIGN, RELU};
 
 class Neuron{
 	public:
@@ -49,6 +50,7 @@ class Neuron{
 		const char* FpClassify(double x);
 		double Phi();
 		double PhiPrime();
+		double LinearPrime();
 		double InnerProduct(const vector<const double*>& inputs, const vector<Weight>& weights);
 		//All of the following functions can be found in the neural net literature.
 		double Sigmoid(double expt);

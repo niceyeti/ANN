@@ -147,7 +147,7 @@ void MultilayerNetwork::BuildBincoder(int numInputs, int numLayers, const vector
 {
 	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema, 0.0);
 
-	AssignRandomWeights(4.0,-4.0);
+	AssignRandomWeights(2.0,-2.0);
 	//random weight assignment writes to _biases; clamp all biases to zero, since encoders don't have biases
 	for(int i = 0; i < _biases.size(); i++){
 		_biases[i] = 0.0;

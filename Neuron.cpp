@@ -2,7 +2,7 @@
 
 Neuron::Neuron(int numInputs, ActivationFunction methodType)
 {
-	srand(time(NULL));
+	//srand(time(NULL));
 
 	Weights.resize(numInputs);
 	for(int i = 0; i < Weights.size(); i++){
@@ -102,14 +102,14 @@ const char* Neuron::FpClassify(double x)
 
 void Neuron::ValidateOutput()
 {
-	if(!std::isnormal(this->Output) && this->Output != 0.0){
+	if(!std::isnormal(Output) && Output != 0.0){
 		cout << "WARNING Neuron Output non-normal: " << FpClassify(Output) << endl; 
 	}
 }
 
 void Neuron::ValidateSignal()
 {
-	if(!std::isnormal(this->Signal) && this->Signal != 0.0){
+	if(!std::isnormal(Signal) && Signal != 0.0){
 		cout << "WARNING Neuron Signal non-normal: " << FpClassify(Signal) << endl; 
 	}
 }
@@ -216,6 +216,10 @@ double Neuron::Phi()
 		case SIGN:
 				Output = (Signal >= 0) ? 1.0 : -1.0;
 			break;
+
+		case RELU:
+				Output = std::max(Signal,0.0);
+			break;
 	
 		default:
 				cout << "ERROR unknown output type: " << (int)PhiFunction << endl;
@@ -223,6 +227,17 @@ double Neuron::Phi()
 	}
 	
 	return Output;
+}
+
+double Neuron::LinearPrime()
+{
+	double result = 0.0;
+
+	for(int i = 0; i < Weights.size(); i++){
+		result += Weights[i].w;
+	}
+
+	return result;
 }
 
 /*
@@ -244,9 +259,17 @@ double Neuron::PhiPrime()
 			break;
 
 		case LINEAR:
-				result = 1.0;
+				result = LinearPrime();
 			break;
-	
+
+		case RELU:
+				if(Signal <= 0.0){
+					result = 0.5;  //Some research indicates this is a good approximation near zero, along with the logistic function (which is the derivative of soft-plus function)
+				}
+				else{
+					result = LinearPrime();
+				}
+			break;
 		default:
 				cout << "ERROR unknown output type in PhiPrime(): " << (int)PhiFunction << endl;
 			break;
@@ -271,6 +294,9 @@ ActivationFunction Neuron::GetActivationFunction(const string& function)
 	else if(function == "SIGN"){
 		af = SIGN;
 	}
+	else if(function == "RELU"){
+		af = RELU;
+	}
 	else{
 		cout << "Activation function unknown: " << function << "  returning LOGISTIC" << endl;
 	}
@@ -286,15 +312,23 @@ string Neuron::GetActivationFunctionString(ActivationFunction function)
 		case TANH:
 			funcStr = "TANH";
 		break;
+		
 		case LOGISTIC:
 			funcStr = "LOGISTIC";
 		break;
+
 		case LINEAR:
 			funcStr = "LINEAR";
 		break;
+
 		case SIGN:
 			funcStr = "SIGN";
 		break;
+
+		case RELU:
+			funcStr = "RELU";
+		break;
+
 		default:
 			funcStr = "UNKNOWN";
 		break;

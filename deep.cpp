@@ -26,6 +26,8 @@ bool GetActivationSeq(char* arg, vector<ActivationFunction>& activationFunctions
 			case 'L':
 				activationFunctions.push_back(LINEAR);
 				break;
+			case 'R':
+				activationFunctions.push_back(RELU);
 			case ',':
 				//do nothing; skip
 				break;
@@ -41,8 +43,8 @@ bool GetActivationSeq(char* arg, vector<ActivationFunction>& activationFunctions
 
 void usage()
 {
-	cout << "Usage: ./batch [path to dataset] [#layers] [#numInputs] [hidden layer size sequence: 10,3,1] [function csv sequence: O,T,L ] [eta] [momentum] [optional: weight decay]" << endl;
-	cout << "For 'function' parameters, valid values are: l(O)gistic, (T)anh, or (L)inear" << endl;
+	cout << "Usage: ./batch [path to dataset] [#layers] [#numInputs] [hidden layer size sequence: 10,3,1] [function csv sequence: O,T,L,R ] [eta] [momentum] [optional: weight decay]" << endl;
+	cout << "For 'function' parameters, valid values are: l(O)gistic, (T)anh, or (L)inear or (R)ELU" << endl;
 	cout << "Function csv sequence: the sequence of functions used by each hidden layer" << endl;
 	cout << "Hidden layer sequence: a csv integer sequence signifying the number of neurons in each layer, where the first item is the size of the first hidden layer, etc" << endl;
 }
@@ -121,9 +123,9 @@ int main(int argc, char** argv)
 		//nn.BincoderOnlineTrain(dataset, eta, momentum, iterations, l2Decay);
 		nn.BincoderTest(dataset);
 
-		if(i == 20){
-			cout << "Eta reset" << endl;
-			eta *= 0.1;
+		if(i % 20 == 19){
+			cout << "ETA RESET" << endl;
+			eta *= 0.5;
 		}
 		i++;
 	}
