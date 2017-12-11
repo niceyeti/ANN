@@ -84,6 +84,7 @@ class MultilayerNetwork{
 		void BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
 		void PrintNetworkProperties();
 
+		void InvertDataset(vector<vector<double> >& dataset);
 		void ResetNetworkWeightDeltas();
 		double GetNetWeightDeltas();
 		void BuildDeepNetwork(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema, double initialBias=0.0);

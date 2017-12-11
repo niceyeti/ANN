@@ -577,6 +577,18 @@ void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs)
 		return;
 	}
 
+	/*
+	//experimental: weight individual updates by the overall 'wrongness' of the prediction summed over all predictions, to prevent over-correction when only one neuron is slightly off
+	//calculate the final-layer deltas, which are just the signal-prime values
+	//Result: didn't work. And if you think about it, an appropriately chosen eta value does the same thing, per smoothing the expected updates
+	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
+	double netError = 0.0, dampingFactor = 0.0;
+	for(i = 0; i < finalLayer.size(); i++){
+		netError += (inputs[i] - finalLayer[i].Output);
+	}
+	dampingFactor = netError / ((double)finalLayer.size() * 2.0);  // <-- this was then multiplied by (inputs[i] - finalLayer[i].Output) below
+	*/
+	
 	//calculate the final-layer deltas, which are just the signal-prime values
 	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
 	for(i = 0; i < finalLayer.size(); i++){
@@ -853,7 +865,18 @@ void MultilayerNetwork::BincoderBatchTrain(const vector<vector<double> >& datase
 	while(iterations < maxIterations){
 		ResetNetworkWeightDeltas(); //reset accumulated weight deltas to 0.0
 		//batch accumulate errors over n random training examples
-		for(i = 0; i < batchSize && i < dataset.size(); i++){
+		for(i = 0; i < batchSize && i < (dataset.size()/2); i++){
+			//selecting the inverted data examples this way keeps example correlated: select original example, then select its inverted counterpart, repeat
+			/*
+			if(i%2==0){
+			const vector<double>& example = dataset[ i ];
+			BincoderBackprop(example,true);
+			}
+			else{
+			const vector<double>& example = dataset[ i*2 ];
+			BincoderBackprop(example,true);
+			}
+			*/
 			//randomly choose an example
 			const vector<double>& example = dataset[ rand() % dataset.size() ];
 			//accumulates errors (deltas) from a bunch of examples
@@ -1256,6 +1279,43 @@ void MultilayerNetwork::Tokenize(const string &s, char delim, vector<string> &to
 	while (getline(ss, temp, delim)) {
 		tokens.push_back(temp);
 	}
+}
+
+/*
+Solely for the binary autoencoder. The binary autoencoder consumes examples in the form: +1,-1,+1,-1....
+for which the entire input is the target output (multilable autoencoding).
+
+A strategy for tweeking the learning process is to invert each sample, and get the neural net to learn from these as well,
+forcing the network AWAY from these examples. So we trick the network into unlearning the inverted training vectors by appending
+a -1 to these ones, and a +1 to the original positive examples.
+
+Thus, all examples are appended a +1. Then, each of these examples is inverted and also added to the dataset.
+Who the heck knows if it will work well, but its a nice trick!
+
+Note that the algorithm here will double the size of the dataset, with the original examples in the first half,
+and inverted examples in the back half. It will be up to the training algorithm to select example according to 
+some desired expectation, like selecting pairwirse positive/inverted examples inline.
+*/
+void MultilayerNetwork::InvertDataset(vector<vector<double> >& dataset)
+{
+	//capture the static dataset size, since we'll be adding to it
+	int numExamples = dataset.size();
+
+	for(int i = 0; i < numExamples; i++){
+		//append a +1 to each example
+		vector<double>& example = dataset[i];
+		example.push_back(1.0);
+
+		//invert the example
+		vector<double> invertedExample(example);
+		for(int j = 0; j < invertedExample.size(); j++){
+			invertedExample[j] *= -1.0;
+		}
+		//append the new example
+		dataset.push_back(invertedExample);
+	}
+
+	cout << "DATASET INVERTED Remember to change input/output layer size accordingly. Training example size is now: " << dataset[0].size() << endl;
 }
 
 /*

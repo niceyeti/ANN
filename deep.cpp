@@ -50,7 +50,12 @@ void usage()
 }
 
 /*
-Interestinly good result: ./dnn Data/bintraces.csv 4 1089 500,33,500,1089 T,T,T,T 0.1 0.01
+This achieved the highest performance of around 0.12-0.14, a single layer network, and using data inversion:
+	./dnn Data/compbins.csv 1 40 40 T 0.1 0.05 0.5
+Even deep networks only pulled around 0.22 best hamming error:
+	./dnn Data/compbins.csv 4 40 40,40,40,40 T,T,T,T 0.1 0.05 0.5
+Momentum seemed to have a huge impact; some results were competely stationary (no improvement over hamming error 0.50) for momentum=0.0
+
 */
 
 
@@ -62,7 +67,7 @@ int main(int argc, char** argv)
 	double momentum, eta, l2Decay;
 	string path, outputFunction, hiddenFunction;
 	vector<vector<double> > dataset;
-	MultilayerNetwork nn;	
+	MultilayerNetwork nn;
 	vector<string> tokens;
 
 	if(argc < 8){
@@ -102,11 +107,16 @@ int main(int argc, char** argv)
 		l2Decay = stod(string(argv[7]));
 	}
 
-	//build the network from the cmd line parameters
-	nn.BuildBincoder(numInputs, numLayers, neuronsPerLayer, activationFunctions);
 	//set up the network output and hidden layer functions
 	//read the dataset
 	nn.ReadCsvDataset(path, dataset);
+	//I have no results yet proving this works/does not work; at most, it doesn't explode. Would have to average many runs under common parameters to verify any improvements.
+	nn.InvertDataset(dataset);
+
+	//build the network from the cmd line parameters
+	numInputs = (int)dataset[0].size();
+	neuronsPerLayer[neuronsPerLayer.size()-1] = numInputs; //OVERRIDES USER DIMENSIONS; safer during experiments
+	nn.BuildBincoder(numInputs, numLayers, neuronsPerLayer, activationFunctions);
 
 	//for(int i = 0; i < dataset.size(); i++){
 	//	for(int j = 0; j < dataset[i].size(); j++){
@@ -115,7 +125,7 @@ int main(int argc, char** argv)
 	//	cout << endl;
 	//}
 	int iterations = 1;
-	int batchSize = 1000;
+	int batchSize = 2000;
 	int i = 0;
 
 	while(1){
@@ -124,8 +134,8 @@ int main(int argc, char** argv)
 		nn.BincoderTest(dataset);
 
 		if(i % 20 == 19){
-			cout << "ETA RESET" << endl;
-			eta *= 0.5;
+			eta *= 0.9;
+			cout << "ETA RESET: " << eta << endl;
 		}
 		i++;
 	}
