@@ -587,8 +587,35 @@ void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs)
 		netError += (inputs[i] - finalLayer[i].Output);
 	}
 	dampingFactor = netError / ((double)finalLayer.size() * 2.0);  // <-- this was then multiplied by (inputs[i] - finalLayer[i].Output) below
+
+	//An averaging technique: captue correlation of outputs by correcting each neurons error via the avg error across ass high/low target outputs
+	//Result: Total crap
+	double oneAvg = 0.0, zeroAvg = 0.0, oneCt = 0.0, zeroCt = 0.0;
+	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
+	for(i = 0; i < finalLayer.size(); i++){
+		if(inputs[i] > 0){
+			oneCt++;
+			oneAvg += (inputs[i] - finalLayer[i].Output);
+		}
+		else{
+			zeroCt++;
+			zeroAvg += (inputs[i] - finalLayer[i].Output);
+		}
+	}
+	oneAvg /= oneCt; //average the error
+	zeroAvg /= zeroCt;
+
+	for(i = 0; i < finalLayer.size(); i++){
+		if(finalLayer[i].Output > 0){
+			finalLayer[i].Delta = finalLayer[i].PhiPrime() * (oneAvg - finalLayer[i].Output);
+		}
+		else{
+			finalLayer[i].Delta = finalLayer[i].PhiPrime() * (zeroAvg - finalLayer[i].Output);
+		}
+	}
 	*/
-	
+
+	/*
 	//calculate the final-layer deltas, which are just the signal-prime values
 	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
 	for(i = 0; i < finalLayer.size(); i++){
@@ -598,11 +625,15 @@ void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs)
 			outError *= 0.5;
 		}
 		finalLayer[i].Delta = finalLayer[i].PhiPrime() * outError;
-		*/
+		
 		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
 		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (inputs[i] - finalLayer[i].Output);
 		//cout << "delta " << finalLayer[i].Delta << endl;
 	}
+	*/
+
+	BincoderSetOutputErrors_Classical(inputs);
+	//BincoderSetBpMllError(inputs);
 
 	//cout << "final layer size: " << finalLayer.size() << endl;
 	//sleep(2);
@@ -618,6 +649,78 @@ void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs)
 			}
 			leftLayer[i].Delta = leftLayer[i].PhiPrime() * sum;
 		}
+	}
+}
+
+/*
+Quick and dirty implementation of bp-mll error function. Note this requires TANH output functions.
+*/
+void MultilayerNetwork::BincoderSetBpMllError(const vector<double>& targets)
+{
+	double highCount = 0, lowCount = 0;
+
+	for(int i = 0; i < targets.size(); i++){
+		if(targets[i] > 0){
+			highCount++;
+		}
+		else{
+			lowCount++;
+		}
+	}
+
+	//bp-mll possess the exception that targets cannot be all high nor all low; this effectively ignores the training sample by not propagating it
+	if(highCount == targets.size() || lowCount == targets.size()){
+		vector<Neuron>& finalLayer = _layers[_layers.size()-1];
+		for(int i = 0; i < finalLayer.size(); i++){
+			finalLayer[i].Delta = 0.0;
+		}
+	}
+	else{
+		//regular bp-mll update
+		vector<Neuron>& finalLayer = _layers[_layers.size()-1];
+		for(int i = 0; i < finalLayer.size(); i++){
+			double error = 0.0;
+			if(targets[i] > 0){ //target is positive, so correct output to maximize distance wrt low targets
+				for(int j = 0; j < targets.size(); j++){
+					if(targets[j] < 0){
+						error += exp( -(finalLayer[i].Output - targets[j]) );
+					}
+				}
+				finalLayer[i].Delta = finalLayer[i].PhiPrime() * (1.0 / (highCount*lowCount)) * error;
+			}
+			else{ //target is negative, so correct output to maximize distance wrt high targets
+				for(int j = 0; j < targets.size(); j++){
+					if(targets[j] > 0){
+						error += exp( -(targets[j] - finalLayer[i].Output) );
+					}
+				}
+				finalLayer[i].Delta = -finalLayer[i].PhiPrime() * (1.0 / (highCount*lowCount)) * error;
+			}
+
+			//cout << "delta " << finalLayer[i].Delta << endl;
+		}
+	}
+}
+
+/*
+The classical-mlp final layer error calculation for sum-quared-error. This is broken out because
+with multilabel classification many error functions are possible.
+*/
+void MultilayerNetwork::BincoderSetOutputErrors_Classical(const vector<double>& targets)
+{
+	//calculate the final-layer deltas, which are just the signal-prime values
+	vector<Neuron>& finalLayer = _layers[_layers.size()-1];
+	for(int i = 0; i < finalLayer.size(); i++){
+		/* This works, as far as improving/tuning different errors: 1/0 or 0/1, as desired
+		double outError = inputs[i] - finalLayer[i].Output;
+		if(outError < 1.0){
+			outError *= 0.5;
+		}
+		finalLayer[i].Delta = finalLayer[i].PhiPrime() * outError;
+		*/
+		//in Duda, this update is: delta = f'(net) * (t_k - z_k)
+		finalLayer[i].Delta = finalLayer[i].PhiPrime() * (targets[i] - finalLayer[i].Output);
+		//cout << "delta " << finalLayer[i].Delta << endl;
 	}
 }
 

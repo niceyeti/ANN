@@ -111,7 +111,7 @@ int main(int argc, char** argv)
 	//read the dataset
 	nn.ReadCsvDataset(path, dataset);
 	//I have no results yet proving this works/does not work; at most, it doesn't explode. Would have to average many runs under common parameters to verify any improvements.
-	nn.InvertDataset(dataset);
+	//nn.InvertDataset(dataset);
 
 	//build the network from the cmd line parameters
 	numInputs = (int)dataset[0].size();
@@ -129,8 +129,8 @@ int main(int argc, char** argv)
 	int i = 0;
 
 	while(1){
-		nn.BincoderBatchTrain(dataset, eta, momentum, batchSize, iterations, l2Decay);
-		//nn.BincoderOnlineTrain(dataset, eta, momentum, iterations, l2Decay);
+		//nn.BincoderBatchTrain(dataset, eta, momentum, batchSize, iterations, l2Decay);
+		nn.BincoderOnlineTrain(dataset, eta, momentum, iterations, l2Decay);
 		nn.BincoderTest(dataset);
 
 		if(i % 20 == 19){
