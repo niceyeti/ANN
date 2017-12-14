@@ -84,6 +84,8 @@ class MultilayerNetwork{
 		void BuildNet(int numLayers, int numInputs, int numHiddenUnits, int numOutputUnits);
 		void PrintNetworkProperties();
 
+		void BrainDamage();
+		void NegateWeights();
 		void BincoderSetBpMllError(const vector<double>& targets);
 		void BincoderSetOutputErrors_Classical(const vector<double>& targets);
 		void InvertDataset(vector<vector<double> >& dataset);

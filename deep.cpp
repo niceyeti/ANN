@@ -136,6 +136,8 @@ int main(int argc, char** argv)
 		if(i % 20 == 19){
 			eta *= 0.9;
 			cout << "ETA RESET: " << eta << endl;
+			nn.NegateWeights();  //this is silly, but its funny to watch the weights/error recover each time for ./dnn Data/compbins.csv 1 40 40 T 0.1 0.5 0.00
+			//nn.PrintWeights();
 		}
 		i++;
 	}

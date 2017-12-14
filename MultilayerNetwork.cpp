@@ -143,6 +143,43 @@ void MultilayerNetwork::BuildDeepNetwork(int numInputs, int numLayers, vector<in
 	}
 }
 
+/*
+Given the discrete combinatorial nature of the bincoder, it may be desirable to 
+nullify certain interlayer connections; say half of them, or randomly chosen ones, to yield
+better performance on combinatorial problems. For now this is completely ad hoc and exploratory.
+*/
+void MultilayerNetwork::BrainDamage()
+{
+	//sever some interlayer connections
+	for(int l = _layers.size() - 1; l > 0; l--){
+		vector<Neuron>& prevLayer = _layers[l-1];
+		vector<Neuron>& curLayer = _layers[l];
+		for(int i = 0; i < curLayer.size(); i++){
+			for(int j = 0; j < prevLayer.size(); j++){
+				if(j % 2 == 1){
+					//sever this connection
+					curLayer[i].Inputs[j+1] = NULL;
+				}
+			}
+		}
+	}
+}
+
+void MultilayerNetwork::NegateWeights()
+{
+	//sever some interlayer connections
+	for(int l = 0; l < _layers.size(); l++){
+		vector<Neuron>& curLayer = _layers[l];
+		for(int i = 0; i < curLayer.size(); i++){
+			Neuron& neuron = curLayer[i];
+			for(int j = 0; j < neuron.Weights.size(); j++){
+				neuron.Weights[j].w *= -1.0;
+			}
+		}
+	}
+
+}
+
 void MultilayerNetwork::BuildBincoder(int numInputs, int numLayers, const vector<int> neuronsPerLayer, const vector<ActivationFunction> activationSchema)
 {
 	BuildDeepNetwork(numInputs, numLayers, neuronsPerLayer, activationSchema, 0.0);
@@ -153,6 +190,7 @@ void MultilayerNetwork::BuildBincoder(int numInputs, int numLayers, const vector
 		_biases[i] = 0.0;
 	}
 
+	//BrainDamage();
 	PrintNetworkProperties();
 	PrintWeights();
 }
@@ -645,7 +683,9 @@ void MultilayerNetwork::BincoderBackpropagateError(const vector<double>& inputs)
 		for(i = 0; i < leftLayer.size(); i++){
 			//sum products over the deltas/weights from the right layer
 			for(j = 0, sum = 0.0; j < rightLayer.size(); j++){
-				sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1].w); //plus one on the right, to account for the zeroeth bias weight
+				if(rightLayer[j].Inputs[i+1] != NULL){ //for the brain damage approach; dont backprop signals that are blocked for this neuron
+					sum += (rightLayer[j].Delta * rightLayer[j].Weights[i+1].w); //plus one on the right, to account for the zeroeth bias weight
+				}
 			}
 			leftLayer[i].Delta = leftLayer[i].PhiPrime() * sum;
 		}
@@ -837,6 +877,7 @@ void MultilayerNetwork::BincoderTest(const vector<vector<double> >& dataset)
 {
 	int lowErrors = 0, highErrors=0, hammingErrors = 0; //all bits not matching
 	int highBits = 0, lowBits=0, n = 0;
+	double error = 0.0; //sum of all real-valued error
 
 	for(int i = 0; i < dataset.size(); i++){
 		const vector<double>& sample = dataset[i];
@@ -846,6 +887,7 @@ void MultilayerNetwork::BincoderTest(const vector<vector<double> >& dataset)
 			n++;
 			bool predictedBit = _layers.back()[j].Output > 0.0;
 			bool actualBit = sample[j] > 0.0;
+			error += (_layers.back()[j].Output - sample[j]);
 			//cout << "Predicted: " << predictedBit << "  Actual: " << actualBit << endl;
 			if(predictedBit == 0 && actualBit == 1){
 				lowErrors += 1;
@@ -862,7 +904,7 @@ void MultilayerNetwork::BincoderTest(const vector<vector<double> >& dataset)
 		}
 	}
 
-	cout << "Low errors: " << lowErrors << "\tHigh errors: " << highErrors << endl;
+	cout << "Low errors: " << lowErrors << "\tHigh errors: " << highErrors << "   Real error: " << error << endl;
 	cout << "Hamming errors: " << (lowErrors+highErrors) << "  High bits: " << highBits << "  Low bits: " << lowBits << " Hamming error: " << (double)(lowErrors+highErrors) /(double)n <<  endl;
 }
 

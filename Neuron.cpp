@@ -346,7 +346,9 @@ double Neuron::InnerProduct(const vector<const double*>& inputs, const vector<We
 	}
 
 	for(int i = 0; i < inputs.size(); i++){
-		sum += (*inputs[i]) * weights[i].w;
+		if(inputs[i] != NULL){
+			sum += (*inputs[i]) * weights[i].w;
+		}
 	}
 	
 	return sum;
